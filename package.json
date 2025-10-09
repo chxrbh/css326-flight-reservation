@@ -1,0 +1,18 @@
+{
+  "name": "vite-react-mysql",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n CLIENT,SERVER -c blue,green \"npm:dev:client\" \"npm:dev:server\"",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5"
+  }
+}
