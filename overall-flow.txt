@@ -10,6 +10,7 @@ server/src/routes/<route-name>.ts <- sql command
 client/src/pages/<PageName>.tsx
 - put page name in route in client/src/App.tsx
 - using function from hooks
+* do not forget to add route in client/src/App.tsx
 
 client/hooks/useApiQuery/<use...>.ts
 - api linking client and server
