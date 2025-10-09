@@ -14,24 +14,24 @@ export async function api<T = any>(
 }
 
 // example calls
-export const FlightsAPI = {
-  list: (
-    params: { date?: string; origin?: string; destination?: string } = {}
-  ) => {
-    const q = new URLSearchParams(params as any).toString();
-    return api(`/flights${q ? `?${q}` : ""}`);
-  },
-};
+// export const FlightsAPI = {
+//   list: (
+//     params: { date?: string; origin?: string; destination?: string } = {}
+//   ) => {
+//     const q = new URLSearchParams(params as any).toString();
+//     return api(`/flights${q ? `?${q}` : ""}`);
+//   },
+// };
 
-export const AuthAPI = {
-  login: (email: string, password: string) =>
-    api<{ token: string }>(`/auth/login`, {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-  register: (email: string, password: string, full_name?: string) =>
-    api(`/auth/register`, {
-      method: "POST",
-      body: JSON.stringify({ email, password, full_name }),
-    }),
-};
+// export const AuthAPI = {
+//   login: (email: string, password: string) =>
+//     api<{ token: string }>(`/auth/login`, {
+//       method: "POST",
+//       body: JSON.stringify({ email, password }),
+//     }),
+//   register: (email: string, password: string, full_name?: string) =>
+//     api(`/auth/register`, {
+//       method: "POST",
+//       body: JSON.stringify({ email, password, full_name }),
+//     }),
+// };

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import Airlines from "@/pages/Airlines";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 type User = { id: number; name: string; email: string };
 
 export default function App() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [users, setUsers] = useState<User[]>([]);
+  // const [loading, setLoading] = useState(true);
 
   // async function refresh() {
   //   setLoading(true);
@@ -26,34 +27,15 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-gray-50 text-gray-900">
-        <header className="p-6 shadow bg-white">
-          <h1 className="text-2xl font-bold">
-            Vite + React + Tailwind + MySQL
-          </h1>
-        </header>
-
-        <main className="p-6 space-y-6">
-          <div className="text-sm text-gray-600">
-            API: {(import.meta as any).env.VITE_API_URL}
-          </div>
-
-          <Airlines />
-
-          {loading ? (
-            <p className="animate-pulse">Loading users…</p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {users.map((u) => (
-                <div key={u.id} className="rounded-2xl border p-4 bg-white">
-                  <div className="font-semibold">{u.name}</div>
-                  <div className="text-sm text-gray-600">{u.email}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </main>
-      </div>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-50 text-gray-900">
+          <Routes>
+            <Route path="/" element={<Navigate to="/airlines" replace />} />
+            <Route path="/airlines" element={<Airlines />} />
+            {/* <Route path="*" element={<NotFound />} /> */}
+          </Routes>
+        </div>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

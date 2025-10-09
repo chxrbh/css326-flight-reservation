@@ -1,0 +1,19 @@
+client/src/pages/<PageName>.tsx <- front
+	|
+client/hooks/useApiQuery/<use...>.ts
+	|
+server/src/routes/<route-name>.ts <- sql command
+	|
+	db
+
+
+client/src/pages/<PageName>.tsx
+- put page name in route in client/src/App.tsx
+- using function from hooks
+
+client/hooks/useApiQuery/<use...>.ts
+- api linking client and server
+* do not forget to add list of hook to client/hooks/useApiQuery/index.ts
+
+server/src/routes/<route-name>.ts 
+- where to put real mySQL command
