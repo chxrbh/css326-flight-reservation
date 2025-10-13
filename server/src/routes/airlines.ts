@@ -54,3 +54,35 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+
+// Update airline
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, code, country } = req.body;
+
+    if (!name || !code) {
+      return res
+        .status(400)
+        .json({ error: "name and airline_iata_code required" });
+    }
+
+    await pool.query(
+      "UPDATE airline SET name = ?, airline_iata_code = ?, country = ? WHERE airline_id = ?",
+      [name, String(code).toUpperCase(), country || null, id]
+    );
+
+    const [rows] = await pool.query(
+      "SELECT airline_id, name, airline_iata_code, country, support_email, support_phone FROM airline WHERE airline_id = ?",
+      [id]
+    );
+
+    const row = (rows as any[])[0];
+    if (!row) return res.status(404).json({ error: "Airline not found" });
+
+    res.json(row);
+  } catch (err: any) {
+    console.error("PUT /airlines/:id error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});

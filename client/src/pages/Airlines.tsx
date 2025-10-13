@@ -10,6 +10,7 @@ import {
   useAirlines,
   useAddAirline,
   useDeleteAirline,
+  useUpdateAirline,
 } from "@/hooks/useApiQuery";
 
 type Airline = {
@@ -17,6 +18,8 @@ type Airline = {
   name: string;
   code: string;
   country?: string | null;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
 };
 
 export default function Airlines() {
@@ -38,6 +41,7 @@ export default function Airlines() {
   // Mutations
   const addAirline = useAddAirline();
   const deleteAirline = useDeleteAirline();
+  const updateAirline = useUpdateAirline();
 
   // Local form state
   const [isAddingAirline, setIsAddingAirline] = useState(false);
@@ -46,6 +50,9 @@ export default function Airlines() {
     code: "",
     country: "",
   });
+
+  const [editingAirline, setEditingAirline] = useState<Airline | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", code: "", country: "" });
 
   const handleAddAirline = () => {
     if (!newAirline.name || !newAirline.code) {
@@ -94,6 +101,48 @@ export default function Airlines() {
     });
   };
 
+  const startEditAirline = (airline: Airline) => {
+    setEditingAirline(airline);
+    setEditForm({
+      name: airline.name,
+      code: String(airline.code || "").toUpperCase(),
+      country: airline.country || "",
+    });
+  };
+
+  const handleUpdateAirline = () => {
+    if (!editingAirline) return;
+    if (!editForm.name || !editForm.code) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateAirline.mutate(
+      {
+        id: editingAirline.id,
+        updates: { ...editForm, code: editForm.code.toUpperCase() },
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Airline updated successfully",
+          });
+          setEditingAirline(null);
+        },
+        onError: (e: any) =>
+          toast({
+            title: "Update failed",
+            description: e?.message || "Unable to update airline",
+            variant: "destructive",
+          }),
+      }
+    );
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -126,7 +175,7 @@ export default function Airlines() {
         <h1 className="text-3xl font-bold">Airline Management</h1>
         <Button
           onClick={() => setIsAddingAirline(true)}
-          className="bg-gradient-primary hover:opacity-90"
+          className=" hover:opacity-90"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Airline
@@ -182,7 +231,7 @@ export default function Airlines() {
               <Button
                 onClick={handleAddAirline}
                 disabled={addAirline.isPending}
-                className="bg-gradient-primary hover:opacity-90"
+                className="hover:opacity-90"
               >
                 {addAirline.isPending ? "Adding…" : "Add Airline"}
               </Button>
@@ -190,6 +239,67 @@ export default function Airlines() {
                 variant="outline"
                 onClick={() => setIsAddingAirline(false)}
               >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {editingAirline && (
+        <Card className="bg-gradient-card shadow-card">
+          <CardHeader>
+            <CardTitle>Edit Airline</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Airline Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
+                  placeholder="e.g., Delta Airlines"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-code">Airline Code *</Label>
+                <Input
+                  id="edit-code"
+                  value={editForm.code}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      code: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="e.g., DL"
+                  maxLength={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-country">Country</Label>
+                <Input
+                  id="edit-country"
+                  value={editForm.country}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, country: e.target.value })
+                  }
+                  placeholder="e.g., Thailand"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleUpdateAirline}
+                disabled={updateAirline.isPending}
+                className="hover:opacity-90"
+              >
+                {updateAirline.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button variant="outline" onClick={() => setEditingAirline(null)}>
                 Cancel
               </Button>
             </div>
@@ -207,7 +317,7 @@ export default function Airlines() {
             </p>
             <Button
               onClick={() => setIsAddingAirline(true)}
-              className="bg-gradient-primary hover:opacity-90"
+              className="hover:opacity-90"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add First Airline
@@ -235,13 +345,19 @@ export default function Airlines() {
                   <p>
                     <strong>Country:</strong> {airline.country || "-"}
                   </p>
+                  <p>
+                    <strong>Support Email:</strong> {airline.supportEmail || "-"}
+                  </p>
+                  <p>
+                    <strong>Support Phone:</strong> {airline.supportPhone || "-"}
+                  </p>
                 </div>
                 <div className="flex gap-2 pt-3 border-t">
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    disabled
+                    onClick={() => startEditAirline(airline)}
                   >
                     <Edit className="h-3 w-3 mr-1" />
                     Edit

@@ -12,6 +12,8 @@ export function useAirlines() {
         name: a.name,
         code: a.airline_iata_code, // map correctly
         country: a.country,
+        supportEmail: a.support_email ?? null,
+        supportPhone: a.support_phone ?? null,
       }));
     },
   });
@@ -87,6 +89,43 @@ export function useDeleteAirline() {
     },
 
     // ✅ Final sync
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["airlines"] });
+    },
+  });
+}
+
+export function useUpdateAirline() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string | number; updates: any }) =>
+      api(`/airlines/${vars.id}`, {
+        method: "PUT",
+        body: JSON.stringify(vars.updates),
+      }),
+
+    // Optimistic update
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["airlines"] });
+
+      const previous = queryClient.getQueryData<any[]>(["airlines"]);
+
+      queryClient.setQueryData<any[]>(["airlines"], (old) => {
+        const list = old ?? [];
+        return list.map((a) =>
+          a.id === id ? { ...a, ...updates, code: String(updates.code ?? a.code).toUpperCase() } : a
+        );
+      });
+
+      return { previous };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["airlines"], ctx.previous);
+      }
+    },
+
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["airlines"] });
     },
