@@ -18,6 +18,3 @@ client/hooks/useApiQuery/<use...>.ts
 
 server/src/routes/<route-name>.ts 
 - where to put real mySQL command
-
-
-askdokopd
