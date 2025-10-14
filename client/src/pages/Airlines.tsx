@@ -49,10 +49,12 @@ export default function Airlines() {
     name: "",
     code: "",
     country: "",
+    supportEmail: "",
+    supportPhone: "",
   });
 
   const [editingAirline, setEditingAirline] = useState<Airline | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", code: "", country: "" });
+  const [editForm, setEditForm] = useState({ name: "", code: "", country: "", supportEmail: "", supportPhone: "" });
 
   const handleAddAirline = () => {
     if (!newAirline.name || !newAirline.code) {
@@ -67,7 +69,7 @@ export default function Airlines() {
       { ...newAirline, code: newAirline.code.toUpperCase() },
       {
         onSuccess: () => {
-          setNewAirline({ name: "", code: "", country: "" });
+          setNewAirline({ name: "", code: "", country: "", supportEmail: "", supportPhone: "" });
           setIsAddingAirline(false);
           toast({
             title: "Success",
@@ -107,6 +109,8 @@ export default function Airlines() {
       name: airline.name,
       code: String(airline.code || "").toUpperCase(),
       country: airline.country || "",
+      supportEmail: airline.supportEmail || "",
+      supportPhone: airline.supportPhone || "",
     });
   };
 
@@ -226,6 +230,29 @@ export default function Airlines() {
                   placeholder="e.g., Thailand"
                 />
               </div>
+              <div>
+                <Label htmlFor="supportEmail">Support Email</Label>
+                <Input
+                  id="supportEmail"
+                  type="email"
+                  value={newAirline.supportEmail}
+                  onChange={(e) =>
+                    setNewAirline({ ...newAirline, supportEmail: e.target.value })
+                  }
+                  placeholder="e.g., support@airline.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="supportPhone">Support Phone</Label>
+                <Input
+                  id="supportPhone"
+                  value={newAirline.supportPhone}
+                  onChange={(e) =>
+                    setNewAirline({ ...newAirline, supportPhone: e.target.value })
+                  }
+                  placeholder="e.g., +1 555 123 4567"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <Button
@@ -288,6 +315,29 @@ export default function Airlines() {
                     setEditForm({ ...editForm, country: e.target.value })
                   }
                   placeholder="e.g., Thailand"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-support-email">Support Email</Label>
+                <Input
+                  id="edit-support-email"
+                  type="email"
+                  value={editForm.supportEmail}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, supportEmail: e.target.value })
+                  }
+                  placeholder="e.g., support@airline.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-support-phone">Support Phone</Label>
+                <Input
+                  id="edit-support-phone"
+                  value={editForm.supportPhone}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, supportPhone: e.target.value })
+                  }
+                  placeholder="e.g., +1 555 123 4567"
                 />
               </div>
             </div>

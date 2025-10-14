@@ -19,15 +19,15 @@ router.get("/", async (_req, res) => {
 // ✅ POST /api/airlines
 router.post("/", async (req, res) => {
   try {
-    const { name, code, country } = req.body;
+    const { name, code, country, supportEmail, supportPhone } = req.body;
     if (!name || !code)
       return res
         .status(400)
         .json({ error: "name and airline_iata_code required" });
 
     const [result]: any = await pool.query(
-      "INSERT INTO airline (name, airline_iata_code, country) VALUES (?, ?, ?)",
-      [name, code.toUpperCase(), country || null]
+      "INSERT INTO airline (name, airline_iata_code, country, support_email, support_phone) VALUES (?, ?, ?, ?, ?)",
+      [name, code.toUpperCase(), country || null, supportEmail || null, supportPhone || null]
     );
 
     const [rows] = await pool.query(
@@ -59,7 +59,7 @@ export default router;
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, country } = req.body;
+    const { name, code, country, supportEmail, supportPhone } = req.body;
 
     if (!name || !code) {
       return res
@@ -68,8 +68,8 @@ router.put("/:id", async (req, res) => {
     }
 
     await pool.query(
-      "UPDATE airline SET name = ?, airline_iata_code = ?, country = ? WHERE airline_id = ?",
-      [name, String(code).toUpperCase(), country || null, id]
+      "UPDATE airline SET name = ?, airline_iata_code = ?, country = ?, support_email = ?, support_phone = ? WHERE airline_id = ?",
+      [name, String(code).toUpperCase(), country || null, supportEmail || null, supportPhone || null, id]
     );
 
     const [rows] = await pool.query(
