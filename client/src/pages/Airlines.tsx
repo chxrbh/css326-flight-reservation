@@ -1,3 +1,4 @@
+// src/pages/Airlines.tsx
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,21 @@ import {
   useDeleteAirline,
   useUpdateAirline,
 } from "@/hooks/useApiQuery";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type Airline = {
   id: number | string;
@@ -25,7 +41,7 @@ type Airline = {
 export default function Airlines() {
   const { toast } = useToast();
 
-  // Queries
+  // Data
   const {
     data: airlines = [],
     isLoading,
@@ -43,9 +59,12 @@ export default function Airlines() {
   const deleteAirline = useDeleteAirline();
   const updateAirline = useUpdateAirline();
 
-  // Local form state
-  const [isAddingAirline, setIsAddingAirline] = useState(false);
-  const [newAirline, setNewAirline] = useState({
+  // Dialog states
+  const [isAdding, setIsAdding] = useState(false);
+  const [editing, setEditing] = useState<Airline | null>(null);
+
+  // Forms
+  const [createForm, setCreateForm] = useState({
     name: "",
     code: "",
     country: "",
@@ -53,27 +72,39 @@ export default function Airlines() {
     supportPhone: "",
   });
 
-  const [editingAirline, setEditingAirline] = useState<Airline | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", code: "", country: "", supportEmail: "", supportPhone: "" });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    code: "",
+    country: "",
+    supportEmail: "",
+    supportPhone: "",
+  });
 
-  const handleAddAirline = () => {
-    if (!newAirline.name || !newAirline.code) {
+  // Handlers
+  const handleCreate = () => {
+    if (!createForm.name || !createForm.code) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Name and code are required.",
         variant: "destructive",
       });
       return;
     }
     addAirline.mutate(
-      { ...newAirline, code: newAirline.code.toUpperCase() },
+      { ...createForm, code: createForm.code.toUpperCase() },
       {
         onSuccess: () => {
-          setNewAirline({ name: "", code: "", country: "", supportEmail: "", supportPhone: "" });
-          setIsAddingAirline(false);
+          setCreateForm({
+            name: "",
+            code: "",
+            country: "",
+            supportEmail: "",
+            supportPhone: "",
+          });
+          setIsAdding(false);
           toast({
             title: "Success",
-            description: "Airline added successfully",
+            description: "Airline added successfully.",
           });
         },
         onError: (e: any) =>
@@ -86,56 +117,39 @@ export default function Airlines() {
     );
   };
 
-  const handleDeleteAirline = (id: Airline["id"]) => {
-    deleteAirline.mutate(id, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Airline deleted successfully",
-        });
-      },
-      onError: (e: any) =>
-        toast({
-          title: "Delete failed",
-          description: e?.message || "Unable to delete airline",
-          variant: "destructive",
-        }),
-    });
-  };
-
-  const startEditAirline = (airline: Airline) => {
-    setEditingAirline(airline);
+  const handleStartEdit = (a: Airline) => {
+    setEditing(a);
     setEditForm({
-      name: airline.name,
-      code: String(airline.code || "").toUpperCase(),
-      country: airline.country || "",
-      supportEmail: airline.supportEmail || "",
-      supportPhone: airline.supportPhone || "",
+      name: a.name || "",
+      code: String(a.code || "").toUpperCase(),
+      country: a.country || "",
+      supportEmail: a.supportEmail || "",
+      supportPhone: a.supportPhone || "",
     });
   };
 
-  const handleUpdateAirline = () => {
-    if (!editingAirline) return;
+  const handleUpdate = () => {
+    if (!editing) return;
     if (!editForm.name || !editForm.code) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Name and code are required.",
         variant: "destructive",
       });
       return;
     }
     updateAirline.mutate(
       {
-        id: editingAirline.id,
+        id: editing.id,
         updates: { ...editForm, code: editForm.code.toUpperCase() },
       },
       {
         onSuccess: () => {
+          setEditing(null);
           toast({
             title: "Success",
-            description: "Airline updated successfully",
+            description: "Airline updated successfully.",
           });
-          setEditingAirline(null);
         },
         onError: (e: any) =>
           toast({
@@ -147,24 +161,39 @@ export default function Airlines() {
     );
   };
 
-  // Loading state
+  const handleDelete = (id: Airline["id"]) => {
+    if (!confirm("Delete this airline?")) return;
+    deleteAirline.mutate(id, {
+      onSuccess: () =>
+        toast({
+          title: "Success",
+          description: "Airline deleted successfully.",
+        }),
+      onError: (e: any) =>
+        toast({
+          title: "Delete failed",
+          description: e?.message || "Unable to delete airline",
+          variant: "destructive",
+        }),
+    });
+  };
+
+  // Loading / Error
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="text-center py-12">
-            Loading airlines…
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </CardContent>
         </Card>
       </div>
     );
   }
-
-  // Error state
   if (isError) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <Card className="bg-gradient-card shadow-card">
+        <Card>
           <CardContent className="text-center py-12">
             Failed to load airlines: {String(error?.message || error)}
           </CardContent>
@@ -175,257 +204,294 @@ export default function Airlines() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Airline Management</h1>
-        <Button
-          onClick={() => setIsAddingAirline(true)}
-          className=" hover:opacity-90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Airline
-        </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Airline Management</h1>
+          <p className="text-muted-foreground">
+            Create, edit, and manage airlines
+          </p>
+        </div>
+
+        {/* Add Airline Dialog */}
+        <Dialog open={isAdding} onOpenChange={setIsAdding}>
+          <DialogTrigger asChild>
+            <Button className=" hover:opacity-90">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Airline
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Airline</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Airline Name *</Label>
+                  <Input
+                    id="name"
+                    value={createForm.name}
+                    onChange={(e) =>
+                      setCreateForm((s) => ({ ...s, name: e.target.value }))
+                    }
+                    placeholder="e.g., Delta Air Lines"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="code">Airline Code *</Label>
+                  <Input
+                    id="code"
+                    value={createForm.code}
+                    onChange={(e) =>
+                      setCreateForm((s) => ({
+                        ...s,
+                        code: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="e.g., DL"
+                    maxLength={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="country">Country</Label>
+                  <Input
+                    id="country"
+                    value={createForm.country}
+                    onChange={(e) =>
+                      setCreateForm((s) => ({ ...s, country: e.target.value }))
+                    }
+                    placeholder="e.g., Thailand"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="supportEmail">Support Email</Label>
+                  <Input
+                    id="supportEmail"
+                    type="email"
+                    value={createForm.supportEmail}
+                    onChange={(e) =>
+                      setCreateForm((s) => ({
+                        ...s,
+                        supportEmail: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., support@airline.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="supportPhone">Support Phone</Label>
+                  <Input
+                    id="supportPhone"
+                    value={createForm.supportPhone}
+                    onChange={(e) =>
+                      setCreateForm((s) => ({
+                        ...s,
+                        supportPhone: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., +1 555 123 4567"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleCreate}
+                  disabled={addAirline.isPending}
+                  className=" hover:opacity-90"
+                >
+                  {addAirline.isPending ? "Adding…" : "Add Airline"}
+                </Button>
+                <Button variant="outline" onClick={() => setIsAdding(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {isAddingAirline && (
-        <Card className="bg-gradient-card shadow-card">
-          <CardHeader>
-            <CardTitle>Add New Airline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Airline Name *</Label>
-                <Input
-                  id="name"
-                  value={newAirline.name}
-                  onChange={(e) =>
-                    setNewAirline({ ...newAirline, name: e.target.value })
-                  }
-                  placeholder="e.g., Delta Airlines"
-                />
-              </div>
-              <div>
-                <Label htmlFor="code">Airline Code *</Label>
-                <Input
-                  id="code"
-                  value={newAirline.code}
-                  onChange={(e) =>
-                    setNewAirline({
-                      ...newAirline,
-                      code: e.target.value.toUpperCase(),
-                    })
-                  }
-                  placeholder="e.g., DL"
-                  maxLength={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={newAirline.country}
-                  onChange={(e) =>
-                    setNewAirline({ ...newAirline, country: e.target.value })
-                  }
-                  placeholder="e.g., Thailand"
-                />
-              </div>
-              <div>
-                <Label htmlFor="supportEmail">Support Email</Label>
-                <Input
-                  id="supportEmail"
-                  type="email"
-                  value={newAirline.supportEmail}
-                  onChange={(e) =>
-                    setNewAirline({ ...newAirline, supportEmail: e.target.value })
-                  }
-                  placeholder="e.g., support@airline.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="supportPhone">Support Phone</Label>
-                <Input
-                  id="supportPhone"
-                  value={newAirline.supportPhone}
-                  onChange={(e) =>
-                    setNewAirline({ ...newAirline, supportPhone: e.target.value })
-                  }
-                  placeholder="e.g., +1 555 123 4567"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleAddAirline}
-                disabled={addAirline.isPending}
-                className="hover:opacity-90"
-              >
-                {addAirline.isPending ? "Adding…" : "Add Airline"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddingAirline(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {editingAirline && (
-        <Card className="bg-gradient-card shadow-card">
-          <CardHeader>
-            <CardTitle>Edit Airline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-name">Airline Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, name: e.target.value })
-                  }
-                  placeholder="e.g., Delta Airlines"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-code">Airline Code *</Label>
-                <Input
-                  id="edit-code"
-                  value={editForm.code}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      code: e.target.value.toUpperCase(),
-                    })
-                  }
-                  placeholder="e.g., DL"
-                  maxLength={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-country">Country</Label>
-                <Input
-                  id="edit-country"
-                  value={editForm.country}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, country: e.target.value })
-                  }
-                  placeholder="e.g., Thailand"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-support-email">Support Email</Label>
-                <Input
-                  id="edit-support-email"
-                  type="email"
-                  value={editForm.supportEmail}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, supportEmail: e.target.value })
-                  }
-                  placeholder="e.g., support@airline.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-support-phone">Support Phone</Label>
-                <Input
-                  id="edit-support-phone"
-                  value={editForm.supportPhone}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, supportPhone: e.target.value })
-                  }
-                  placeholder="e.g., +1 555 123 4567"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleUpdateAirline}
-                disabled={updateAirline.isPending}
-                className="hover:opacity-90"
-              >
-                {updateAirline.isPending ? "Saving..." : "Save Changes"}
-              </Button>
-              <Button variant="outline" onClick={() => setEditingAirline(null)}>
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {airlines.length === 0 ? (
-        <Card className="bg-gradient-card shadow-card">
-          <CardContent className="text-center py-12">
-            <Plane className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Airlines Found</h3>
-            <p className="text-muted-foreground mb-4">
-              Get started by adding your first airline to the system.
-            </p>
-            <Button
-              onClick={() => setIsAddingAirline(true)}
-              className="hover:opacity-90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Airline
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {airlines.map((airline) => (
-            <Card
-              key={airline.id}
-              className="bg-gradient-card shadow-card hover:shadow-elegant transition-shadow"
-            >
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="flex items-center gap-2">
-                    <Plane className="h-5 w-5 text-primary" />
-                    {airline.name}
-                  </CardTitle>
-                  <Badge variant="secondary">{airline.code}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    <strong>Country:</strong> {airline.country || "-"}
-                  </p>
-                  <p>
-                    <strong>Support Email:</strong> {airline.supportEmail || "-"}
-                  </p>
-                  <p>
-                    <strong>Support Phone:</strong> {airline.supportPhone || "-"}
-                  </p>
-                </div>
-                <div className="flex gap-2 pt-3 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => startEditAirline(airline)}
+      {/* Table */}
+      <Card>
+        <CardHeader className="pb-0">
+          <CardTitle className="flex items-center gap-2">
+            <Plane className="h-5 w-5 text-primary" />
+            Airlines
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-5">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>IATA Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Support Email</TableHead>
+                <TableHead>Support Phone</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {airlines.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-10 text-muted-foreground"
                   >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteAirline(airline.id)}
-                    disabled={deleteAirline.isPending}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                    No airlines yet. Click <strong>Add Airline</strong> to
+                    create one.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                airlines.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell>
+                      <Badge variant="secondary">{a.code}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell>{a.country || "-"}</TableCell>
+                    <TableCell>{a.supportEmail || "-"}</TableCell>
+                    <TableCell>{a.supportPhone || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        {/* Edit dialog per row */}
+                        <Dialog
+                          open={editing?.id === a.id}
+                          onOpenChange={(open) => !open && setEditing(null)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStartEdit(a)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Airline</DialogTitle>
+                            </DialogHeader>
+
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="edit-name">
+                                    Airline Name *
+                                  </Label>
+                                  <Input
+                                    id="edit-name"
+                                    value={editForm.name}
+                                    onChange={(e) =>
+                                      setEditForm((s) => ({
+                                        ...s,
+                                        name: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-code">
+                                    Airline Code *
+                                  </Label>
+                                  <Input
+                                    id="edit-code"
+                                    value={editForm.code}
+                                    onChange={(e) =>
+                                      setEditForm((s) => ({
+                                        ...s,
+                                        code: e.target.value.toUpperCase(),
+                                      }))
+                                    }
+                                    maxLength={3}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-country">Country</Label>
+                                  <Input
+                                    id="edit-country"
+                                    value={editForm.country}
+                                    onChange={(e) =>
+                                      setEditForm((s) => ({
+                                        ...s,
+                                        country: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-email">
+                                    Support Email
+                                  </Label>
+                                  <Input
+                                    id="edit-email"
+                                    type="email"
+                                    value={editForm.supportEmail}
+                                    onChange={(e) =>
+                                      setEditForm((s) => ({
+                                        ...s,
+                                        supportEmail: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="edit-phone">
+                                    Support Phone
+                                  </Label>
+                                  <Input
+                                    id="edit-phone"
+                                    value={editForm.supportPhone}
+                                    onChange={(e) =>
+                                      setEditForm((s) => ({
+                                        ...s,
+                                        supportPhone: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handleUpdate}
+                                  disabled={updateAirline.isPending}
+                                  className="bg-gradient-primary hover:opacity-90"
+                                >
+                                  {updateAirline.isPending
+                                    ? "Saving..."
+                                    : "Save Changes"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setEditing(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(a.id)}
+                          disabled={deleteAirline.isPending}
+                          aria-label={`Delete ${a.name}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
