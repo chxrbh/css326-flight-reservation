@@ -1,26 +1,28 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
-//import usersRouter from "./routes/users";
+import bodyParser from "body-parser";
+
+import authRouter from "./routes/auth";
 import airlinesRouter from "./routes/airlines";
+import flightSchedulesRouter from "./routes/flight_schedules";
+import flightInstancesRouter from "./routes/flight_instances";
+import searchFlightsRouter from "./routes/search_flights";
+import ticketsRouter from "./routes/tickets";
 
 const app = express();
-app.use(
-  cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-app.use(express.json());
+app.use(cors());
+app.use(bodyParser.json());
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+// ---- Routes based on website pages ----
+app.use("/auth", authRouter);                     // /auth page (signin/signup in one page)
+app.use("/super-admin", airlinesRouter);          // /super-admin page (manage airlines)
+app.use("/flights", flightInstancesRouter);       // /flights page (flight management/filter)
+app.use("/create-schedule", flightSchedulesRouter); // /create-schedule page
+app.use("/create-instance", flightInstancesRouter); // /create-instance page
+app.use("/search-flight", searchFlightsRouter);   // /search-flight page (passenger flight search)
+app.use("/reservations", ticketsRouter);          // /reservations page (user’s booked tickets)
 
-//app.use("/api/users", usersRouter);
-app.use("/api/airlines", airlinesRouter);
-
-const PORT = Number(process.env.PORT) || 4000;
-app.listen(PORT, () =>
-  console.log(`API listening on http://localhost:${PORT}`)
-);
+// ---- Server start ----
+app.listen(4000, () => {
+  console.log("API running at http://localhost:4000");
+});
