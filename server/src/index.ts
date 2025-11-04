@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 //import usersRouter from "./routes/users";
 import airlinesRouter from "./routes/airlines";
+import flightsRouter from "./routes/flights";
+import airportsRouter from "./routes/airports";
 
 const app = express();
 app.use(
@@ -19,6 +21,8 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 //app.use("/api/users", usersRouter);
 app.use("/api/airlines", airlinesRouter);
+app.use("/api/airports", airportsRouter);
+app.use("/api", flightsRouter);
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () =>
