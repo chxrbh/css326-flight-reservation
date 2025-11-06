@@ -244,6 +244,7 @@ router.get("/flight-instances", async (_req, res) => {
               fi.status,
               fi.delayed_min,
               fs.flight_no,
+              al.airline_id,
               al.name              AS airline_name,
               al.airline_iata_code AS airline_code,
               ao.airport_iata_code AS origin_code,

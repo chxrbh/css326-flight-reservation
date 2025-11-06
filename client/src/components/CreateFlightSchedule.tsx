@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +16,20 @@ import {
   useAirports,
   useAirlines,
 } from "@/hooks/useApiQuery";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CreateFlightSchedule() {
   const { toast } = useToast();
   const { data: airports = [], isLoading: loadingAirports } = useAirports();
   const { data: airlines = [], isLoading: loadingAirlines } = useAirlines();
   const createSchedule = useCreateFlightSchedule();
+  const { accessType, account } = useAuth();
+  const isSuperAdmin = accessType === "super-admin";
+  const adminAirlineId = !isSuperAdmin ? account?.airline_id : undefined;
+  const adminAirline = useMemo(
+    () => airlines.find((a: any) => a.id === adminAirlineId),
+    [airlines, adminAirlineId]
+  );
 
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
@@ -31,7 +39,7 @@ export default function CreateFlightSchedule() {
     destination_airport_id: "",
     durationHours: "",
     durationMinutes: "",
-    airline_id: "",
+    airline_id: isSuperAdmin ? "" : adminAirlineId?.toString() ?? "",
   });
 
   const toHHMMSS = (hh: string, mm: string) =>
@@ -141,28 +149,41 @@ export default function CreateFlightSchedule() {
                 />
               </div>
             </div>
-            <div>
-              <Label>Airline *</Label>
-              <select
-                className="w-full mt-1 h-10 rounded-md border px-3"
-                value={f.airline_id}
-                disabled={loadingAirlines}
-                onChange={(e) =>
-                  setF((s) => ({ ...s, airline_id: e.target.value }))
-                }
-              >
-                <option value="">
-                  {loadingAirlines
-                    ? "Loading airlines..."
-                    : "Select airline..."}
-                </option>
-                {airlines?.map((al: { id: number; name: string }) => (
-                  <option key={al.id} value={al.id}>
-                    {al.name}
+            {isSuperAdmin ? (
+              <div>
+                <Label>Airline *</Label>
+                <select
+                  className="w-full mt-1 h-10 rounded-md border px-3"
+                  value={f.airline_id}
+                  disabled={loadingAirlines}
+                  onChange={(e) =>
+                    setF((s) => ({ ...s, airline_id: e.target.value }))
+                  }
+                >
+                  <option value="">
+                    {loadingAirlines
+                      ? "Loading airlines..."
+                      : "Select airline..."}
                   </option>
-                ))}
-              </select>
-            </div>
+                  {airlines?.map((al: { id: number; name: string }) => (
+                    <option key={al.id} value={al.id}>
+                      {al.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <Label>Airline</Label>
+                <div className="mt-1 h-10 flex items-center rounded-md border px-3 bg-muted">
+                  {adminAirline?.name
+                    ? `${adminAirline.name}${
+                        adminAirline.code ? ` (${adminAirline.code})` : ""
+                      }`
+                    : `Airline #${adminAirlineId ?? "-"}`}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
@@ -172,9 +193,13 @@ export default function CreateFlightSchedule() {
                   !f.flight_no ||
                   !f.origin_airport_id ||
                   !f.destination_airport_id ||
-                  !f.airline_id
+                  (!isSuperAdmin && !adminAirlineId) ||
+                  (isSuperAdmin && !f.airline_id)
                 )
                   return;
+                const airlineIdToUse = isSuperAdmin
+                  ? Number(f.airline_id)
+                  : Number(adminAirlineId);
                 createSchedule.mutate(
                   {
                     flight_no: f.flight_no,
@@ -184,7 +209,7 @@ export default function CreateFlightSchedule() {
                     duration: f.durationHours
                       ? toHHMMSS(f.durationHours, f.durationMinutes)
                       : undefined,
-                    airline_id: Number(f.airline_id),
+                    airline_id: airlineIdToUse,
                   },
                   {
                     onSuccess: () => {
@@ -200,7 +225,9 @@ export default function CreateFlightSchedule() {
                         destination_airport_id: "",
                         durationHours: "",
                         durationMinutes: "",
-                        airline_id: "",
+                        airline_id: isSuperAdmin
+                          ? ""
+                          : adminAirlineId?.toString() ?? "",
                       });
                     },
                     onError: (e: any) =>

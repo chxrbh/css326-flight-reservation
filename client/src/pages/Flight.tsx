@@ -7,6 +7,7 @@ import CreateFlightInstance from "@/components/CreateFlightInstance";
 import type { FlightInstance } from "@/hooks/useApiQuery";
 import { useFlightInstances } from "@/hooks/useApiQuery";
 import FlightInfoCard from "@/components/FlightInfoCard";
+import { useAuth } from "@/context/AuthContext";
 
 function formatDT(dt?: string) {
   if (!dt) return "-";
@@ -16,6 +17,13 @@ function formatDT(dt?: string) {
 
 export default function Flight() {
   const { data: instances = [], isLoading, isError } = useFlightInstances();
+  const { account, accessType } = useAuth();
+  const isAirlineAdmin = accessType === "airline-admin";
+  const filteredInstances = isAirlineAdmin
+    ? instances.filter(
+        (instance) => instance.airline_id === account?.airline_id
+      )
+    : instances;
   const instanceDialogRef = useRef<{
     openWith: (instance: FlightInstance) => void;
   } | null>(null);
@@ -48,13 +56,15 @@ export default function Flight() {
         <div className="py-10 text-center text-red-600">
           Failed to load data
         </div>
-      ) : instances.length === 0 ? (
+      ) : filteredInstances.length === 0 ? (
         <div className="py-10 text-center text-muted-foreground">
-          No flight instances yet. Create one to get started.
+          {isAirlineAdmin
+            ? "No flight instances for your airline yet."
+            : "No flight instances yet. Create one to get started."}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {instances.map((instance) => (
+          {filteredInstances.map((instance) => (
             <FlightInfoCard
               key={instance.instance_id}
               flightNo={instance.flight_no}
