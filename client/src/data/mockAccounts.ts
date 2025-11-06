@@ -6,6 +6,7 @@ export type MockAccount = {
   email: string;
   access_type: AccessType;
   airline_id?: number;
+  passenger_id?: number;
 };
 
 export const mockAccounts: MockAccount[] = [
@@ -14,6 +15,7 @@ export const mockAccounts: MockAccount[] = [
     name: "John Doe",
     email: "john.doe@gmail.com",
     access_type: "passenger",
+    passenger_id: 1,
   },
   {
     id: 2,

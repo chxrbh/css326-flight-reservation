@@ -12,7 +12,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     path: "/search",
     label: "Search",
-    allowed: ["passenger", "airline-admin", "super-admin"],
+    allowed: ["passenger"],
   },
   {
     path: "/reservation",
@@ -37,9 +37,7 @@ export default function RoleNav() {
 
   if (!accessType) return null;
 
-  const links = NAV_ITEMS.filter((item) =>
-    item.allowed.includes(accessType)
-  );
+  const links = NAV_ITEMS.filter((item) => item.allowed.includes(accessType));
 
   return (
     <nav className="flex gap-4 text-sm mt-3">

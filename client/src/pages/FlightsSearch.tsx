@@ -12,6 +12,7 @@ import {
   type FlightSearchParams,
 } from "@/hooks/useApiQuery";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "-";
@@ -21,6 +22,8 @@ function formatDateTime(value?: string | null) {
 
 export default function FlightsSearch() {
   const { toast } = useToast();
+  const { account } = useAuth();
+  const passengerId = account?.passenger_id ?? null;
   const { data: airports = [], isLoading: loadingAirports } = useAirports();
   const [form, setForm] = useState({
     originAirportId: "",
@@ -77,9 +80,17 @@ export default function FlightsSearch() {
   };
 
   const handleBook = (instanceId: number, flightNo: string) => {
+    if (!passengerId) {
+      toast({
+        title: "Booking unavailable",
+        description: "This account does not have a passenger profile.",
+        variant: "destructive",
+      });
+      return;
+    }
     setBookingInstanceId(instanceId);
     bookReservation.mutate(
-      { instance_id: instanceId },
+      { instance_id: instanceId, passenger_id: passengerId },
       {
         onSuccess: () => {
           toast({
@@ -248,13 +259,20 @@ export default function FlightsSearch() {
                         Instance #{flight.instance_id}
                       </div>
                       <Button
-                        disabled={bookReservation.isPending}
+                        disabled={bookReservation.isPending || !passengerId}
                         onClick={() =>
                           handleBook(flight.instance_id, flight.flight_no)
                         }
+                        title={
+                          passengerId
+                            ? "Book this flight"
+                            : "Only passenger accounts can book flights"
+                        }
                       >
-                        {bookReservation.isPending &&
-                        bookingInstanceId === flight.instance_id
+                        {!passengerId
+                          ? "Passenger only"
+                          : bookReservation.isPending &&
+                            bookingInstanceId === flight.instance_id
                           ? "Booking..."
                           : "Book Flight"}
                       </Button>
