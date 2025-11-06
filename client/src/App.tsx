@@ -40,7 +40,9 @@ export default function App() {
             <header className="bg-white border-b">
               <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
                 <div>
-                  <div className="text-lg font-semibold">Flight Reservation</div>
+                  <div className="text-lg font-semibold">
+                    Flight Reservation
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     Protected routes by access type
                   </div>
@@ -50,11 +52,14 @@ export default function App() {
             </header>
             <main>
               <Routes>
-                <Route path="/" element={<Navigate to="/flight-search" replace />} />
+                <Route
+                  path="/"
+                  element={<Navigate to="/flight-search" replace />}
+                />
                 <Route
                   path="/airlines"
                   element={
-                    <ProtectedRoute allowed={["airline-admin", "super-admin"]}>
+                    <ProtectedRoute allowed={["super-admin"]}>
                       <Airlines />
                     </ProtectedRoute>
                   }
