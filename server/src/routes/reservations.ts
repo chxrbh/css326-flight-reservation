@@ -74,7 +74,7 @@ router.post("/", async (req, res) => {
   try {
     const {
       instance_id,
-      passenger_id = 1,
+      passenger_id,
       seat = null,
       price_usd = null,
     } = req.body || {};
@@ -87,7 +87,7 @@ router.post("/", async (req, res) => {
     }
 
     if (!passengerId || Number.isNaN(passengerId)) {
-      return res.status(400).json({ error: "passenger_id must be valid" });
+      return res.status(400).json({ error: "passenger_id is required" });
     }
 
     const [flightRows] = await pool.query<RowDataPacket[]>(

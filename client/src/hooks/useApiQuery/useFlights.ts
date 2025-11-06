@@ -22,6 +22,7 @@ export type FlightInstance = {
   delayed_min: number | null;
   max_sellable_seat: number | null;
   flight_no: string;
+  airline_id: number;
   airline_name: string;
   airline_code: string;
   origin_code: string;
