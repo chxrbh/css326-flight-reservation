@@ -28,7 +28,7 @@ export type FlightSearchResult = {
 
 export function useFlightSearch(params: FlightSearchParams | null) {
   return useQuery<FlightSearchResult[]>({
-    queryKey: ["flight-search", params],
+    queryKey: ["search", params],
     queryFn: () => {
       const search = new URLSearchParams();
 
@@ -49,7 +49,7 @@ export function useFlightSearch(params: FlightSearchParams | null) {
 
       const query = search.toString();
       return api<FlightSearchResult[]>(
-        `/flight-search${query ? `?${query}` : ""}`
+        `/search${query ? `?${query}` : ""}`
       );
     },
     enabled: !!params,

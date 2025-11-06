@@ -11,7 +11,7 @@ type ProtectedRouteProps = {
 
 export default function ProtectedRoute({
   allowed,
-  fallbackPath = "/flight-search",
+  fallbackPath = "/search",
   children,
 }: ProtectedRouteProps) {
   const { account, accessType } = useAuth();

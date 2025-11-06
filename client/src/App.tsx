@@ -54,7 +54,7 @@ export default function App() {
               <Routes>
                 <Route
                   path="/"
-                  element={<Navigate to="/flight-search" replace />}
+                  element={<Navigate to="/search" replace />}
                 />
                 <Route
                   path="/airlines"
@@ -73,7 +73,7 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/flight-search"
+                  path="/search"
                   element={
                     <ProtectedRoute
                       allowed={["passenger", "airline-admin", "super-admin"]}

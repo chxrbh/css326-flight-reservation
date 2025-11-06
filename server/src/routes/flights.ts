@@ -56,7 +56,7 @@ router.get("/flight-schedules", async (_req, res) => {
   }
 });
 
-router.get("/flight-search", async (req, res) => {
+router.get("/search", async (req, res) => {
   const { origin_airport_id, destination_airport_id, departure_date } =
     req.query;
 
@@ -148,7 +148,7 @@ router.get("/flight-search", async (req, res) => {
 
     res.json(rows);
   } catch (err: any) {
-    console.error("GET /flight-search error:", err);
+    console.error("GET /search error:", err);
     res.status(500).json({ error: err.message });
   }
 });
