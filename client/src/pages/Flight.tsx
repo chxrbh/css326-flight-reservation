@@ -6,6 +6,7 @@ import CreateFlightSchedule from "@/components/CreateFlightSchedule";
 import CreateFlightInstance from "@/components/CreateFlightInstance";
 import type { FlightInstance } from "@/hooks/useApiQuery";
 import { useFlightInstances } from "@/hooks/useApiQuery";
+import FlightInfoCard from "@/components/FlightInfoCard";
 
 function formatDT(dt?: string) {
   if (!dt) return "-";
@@ -53,46 +54,37 @@ export default function Flight() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {instances.map((f) => (
-            <Card key={f.instance_id} className="">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-xl font-semibold">{f.flight_no}</div>
-                    <div className="text-muted-foreground">
-                      {f.airline_name}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    title="Edit"
-                    onClick={() => {
-                      if (instanceDialogRef.current) {
-                        instanceDialogRef.current.openWith(f);
-                      }
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-y-1">
-                  <div className="text-muted-foreground">Route</div>
-                  <div>
-                    {f.origin_code} → {f.dest_code}
-                  </div>
-                  <div className="text-muted-foreground">Departure</div>
-                  <div>{formatDT(f.departure_datetime)}</div>
-                  <div className="text-muted-foreground">Arrival</div>
-                  <div>{formatDT(f.arrival_datetime)}</div>
-                  <div className="text-muted-foreground">Status</div>
-                  <div className="text-primary capitalize">
-                    {f.status.replace("-", " ")}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {instances.map((instance) => (
+            <FlightInfoCard
+              key={instance.instance_id}
+              flightNo={instance.flight_no}
+              airlineName={instance.airline_name}
+              airlineCode={instance.airline_code}
+              originCode={instance.origin_code}
+              destinationCode={instance.dest_code}
+              details={[
+                { label: "Departure", value: formatDT(instance.departure_datetime) },
+                { label: "Arrival", value: formatDT(instance.arrival_datetime) },
+                {
+                  label: "Status",
+                  value: (
+                    <span className="text-primary capitalize">
+                      {instance.status.replace("-", " ")}
+                    </span>
+                  ),
+                },
+              ]}
+              headerAction={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Edit"
+                  onClick={() => instanceDialogRef.current?.openWith(instance)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              }
+            />
           ))}
         </div>
       )}

@@ -4,19 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import FlightInfoCard from "@/components/FlightInfoCard";
 import {
   useAirports,
   useFlightSearch,
+  useBookReservation,
   type FlightSearchParams,
 } from "@/hooks/useApiQuery";
+import { useToast } from "@/hooks/use-toast";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "-";
@@ -25,6 +20,7 @@ function formatDateTime(value?: string | null) {
 }
 
 export default function FlightsSearch() {
+  const { toast } = useToast();
   const { data: airports = [], isLoading: loadingAirports } = useAirports();
   const [form, setForm] = useState({
     originAirportId: "",
@@ -41,6 +37,10 @@ export default function FlightsSearch() {
     isError,
     error,
   } = useFlightSearch(searchParams);
+  const bookReservation = useBookReservation();
+  const [bookingInstanceId, setBookingInstanceId] = useState<number | null>(
+    null
+  );
 
   const loadingResults = isLoading || isFetching;
   const errorMessage =
@@ -74,6 +74,29 @@ export default function FlightsSearch() {
       departureDate: "",
     });
     setSearchParams({});
+  };
+
+  const handleBook = (instanceId: number, flightNo: string) => {
+    setBookingInstanceId(instanceId);
+    bookReservation.mutate(
+      { instance_id: instanceId },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Booked",
+            description: `Reservation created for ${flightNo}`,
+          });
+        },
+        onError: (mutationError: any) => {
+          toast({
+            title: "Booking failed",
+            description: mutationError?.message || "Server error",
+            variant: "destructive",
+          });
+        },
+        onSettled: () => setBookingInstanceId(null),
+      }
+    );
   };
 
   return (
@@ -196,47 +219,50 @@ export default function FlightsSearch() {
               No flights available for the selected criteria.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Flight</TableHead>
-                  <TableHead>Airline</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Departure</TableHead>
-                  <TableHead>Arrival</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {flights.map((flight) => (
-                  <TableRow key={flight.instance_id}>
-                    <TableCell className="font-medium">
-                      {flight.flight_no}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{flight.airline_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {flight.airline_code}
+            <div className="grid grid-cols-1 gap-4">
+              {flights.map((flight) => (
+                <FlightInfoCard
+                  key={flight.instance_id}
+                  flightNo={flight.flight_no}
+                  airlineName={flight.airline_name}
+                  airlineCode={flight.airline_code}
+                  originCode={flight.origin_code}
+                  originName={flight.origin_name}
+                  destinationCode={flight.destination_code}
+                  destinationName={flight.destination_name}
+                  details={[
+                    { label: "Departure", value: formatDateTime(flight.departure_datetime) },
+                    { label: "Arrival", value: formatDateTime(flight.arrival_datetime) },
+                    {
+                      label: "Status",
+                      value: (
+                        <span className="text-primary capitalize">
+                          {flight.status.replace("-", " ")}
+                        </span>
+                      ),
+                    },
+                  ]}
+                  footer={
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-muted-foreground">
+                        Instance #{flight.instance_id}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {flight.origin_code} → {flight.destination_code}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {flight.origin_name ?? "-"} to{" "}
-                        {flight.destination_name ?? "-"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDateTime(flight.departure_datetime)}</TableCell>
-                    <TableCell>{formatDateTime(flight.arrival_datetime)}</TableCell>
-                    <TableCell className="capitalize text-primary">
-                      {flight.status.replace("-", " ")}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <Button
+                        disabled={bookReservation.isPending}
+                        onClick={() =>
+                          handleBook(flight.instance_id, flight.flight_no)
+                        }
+                      >
+                        {bookReservation.isPending &&
+                        bookingInstanceId === flight.instance_id
+                          ? "Booking..."
+                          : "Book Flight"}
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

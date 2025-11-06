@@ -5,6 +5,7 @@ import cors from "cors";
 import airlinesRouter from "./routes/airlines";
 import flightsRouter from "./routes/flights";
 import airportsRouter from "./routes/airports";
+import reservationsRouter from "./routes/reservations";
 
 const app = express();
 app.use(
@@ -23,6 +24,7 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/airlines", airlinesRouter);
 app.use("/api/airports", airportsRouter);
 app.use("/api", flightsRouter);
+app.use("/api/reservations", reservationsRouter);
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () =>
