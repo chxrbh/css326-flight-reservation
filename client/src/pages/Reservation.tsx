@@ -26,7 +26,9 @@ export default function Reservation() {
   const { toast } = useToast();
   const { account, accessType } = useAuth();
   const isAirlineAdmin = accessType === "airline-admin";
+  const isPassenger = accessType === "passenger";
   const airlineId = isAirlineAdmin ? account?.airline_id : undefined;
+  const passengerId = isPassenger ? account?.passenger_id : undefined;
   const airlineLabel = account?.name
     ? account.name.split(" ")[0]
     : "their";
@@ -46,6 +48,7 @@ export default function Reservation() {
   } = useReservations({
     airlineId,
     flightId: flightFilter ? Number(flightFilter) : undefined,
+    passengerId,
   });
 
   const updateStatus = useUpdateReservationStatus();
@@ -93,6 +96,11 @@ export default function Reservation() {
             ? "Monitor passengers on your flights and mark check-ins."
             : "Review your booked tickets."}
         </p>
+        {isPassenger && !passengerId && (
+          <p className="text-sm text-red-600 mt-2">
+            This account is missing a passenger profile. Please contact support.
+          </p>
+        )}
       </div>
 
       <Card>
