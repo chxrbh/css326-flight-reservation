@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 export type FlightSchedule = {
   flight_id: number;
   flight_no: string;
+  airline_id: number;
   airline_name: string;
   airline_code: string;
   origin_code: string;

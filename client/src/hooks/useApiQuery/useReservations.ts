@@ -14,7 +14,9 @@ export type Reservation = {
   instance_id: number;
   departure_datetime: string;
   arrival_datetime: string;
+  flight_id: number;
   flight_no: string;
+  airline_id: number;
   airline_name: string;
   airline_code: string;
   origin_code: string;
@@ -23,10 +25,27 @@ export type Reservation = {
   destination_name: string | null;
 };
 
-export function useReservations() {
+export type ReservationFilters = {
+  airlineId?: number;
+  flightId?: number;
+};
+
+export function useReservations(filters?: ReservationFilters) {
+  const airlineId = filters?.airlineId ?? null;
+  const flightId = filters?.flightId ?? null;
   return useQuery<Reservation[]>({
-    queryKey: ["reservations"],
-    queryFn: () => api("/reservations"),
+    queryKey: ["reservations", airlineId, flightId],
+    queryFn: () => {
+      const search = new URLSearchParams();
+      if (airlineId) {
+        search.set("airline_id", String(airlineId));
+      }
+      if (flightId) {
+        search.set("flight_id", String(flightId));
+      }
+      const query = search.toString();
+      return api(`/reservations${query ? `?${query}` : ""}`);
+    },
   });
 }
 
@@ -37,6 +56,27 @@ export function useBookReservation() {
       api("/reservations", {
         method: "POST",
         body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["reservations"] });
+    },
+  });
+}
+
+export function useUpdateReservationStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      ticket_id: number;
+      status: Reservation["status"];
+      seat?: string;
+    }) =>
+      api(`/reservations/${payload.ticket_id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: payload.status,
+          seat: payload.seat,
+        }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reservations"] });
