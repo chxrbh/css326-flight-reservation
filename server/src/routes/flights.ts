@@ -56,6 +56,103 @@ router.get("/flight-schedules", async (_req, res) => {
   }
 });
 
+router.get("/flight-search", async (req, res) => {
+  const { origin_airport_id, destination_airport_id, departure_date } =
+    req.query;
+
+  const originId =
+    origin_airport_id !== undefined ? Number(origin_airport_id) : undefined;
+  const destinationId =
+    destination_airport_id !== undefined
+      ? Number(destination_airport_id)
+      : undefined;
+
+  if (
+    origin_airport_id !== undefined &&
+    (Number.isNaN(originId) || originId === 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "origin_airport_id must be a valid number" });
+  }
+
+  if (
+    destination_airport_id !== undefined &&
+    (Number.isNaN(destinationId) || destinationId === 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "destination_airport_id must be a valid number" });
+  }
+
+  const date =
+    typeof departure_date === "string" && departure_date.trim()
+      ? departure_date.trim()
+      : undefined;
+
+  if (
+    date &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) // simple YYYY-MM-DD validation
+  ) {
+    return res
+      .status(400)
+      .json({ error: "departure_date must be in YYYY-MM-DD format" });
+  }
+
+  const filters: string[] = [];
+  const params: Array<number | string> = [];
+
+  if (originId) {
+    filters.push("fs.origin_airport_id = ?");
+    params.push(originId);
+  }
+
+  if (destinationId) {
+    filters.push("fs.destination_airport_id = ?");
+    params.push(destinationId);
+  }
+
+  if (date) {
+    filters.push("DATE(fi.departure_datetime) = ?");
+    params.push(date);
+  }
+
+  try {
+    const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT fi.instance_id,
+              fi.flight_id,
+              fi.departure_datetime,
+              fi.arrival_datetime,
+              fi.max_sellable_seat,
+              fi.status,
+              fi.delayed_min,
+              fs.flight_no,
+              al.name              AS airline_name,
+              al.airline_iata_code AS airline_code,
+              ao.airport_id        AS origin_airport_id,
+              ao.airport_iata_code AS origin_code,
+              ao.name              AS origin_name,
+              ad.airport_id        AS destination_airport_id,
+              ad.airport_iata_code AS destination_code,
+              ad.name              AS destination_name
+       FROM flight_instance fi
+       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+       JOIN airline al         ON fs.airline_id = al.airline_id
+       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
+       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
+       ${whereClause}
+       ORDER BY fi.departure_datetime ASC`,
+      params
+    );
+
+    res.json(rows);
+  } catch (err: any) {
+    console.error("GET /flight-search error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create a new flight schedule
 router.post("/flight-schedules", async (req, res) => {
   try {
