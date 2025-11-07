@@ -124,6 +124,7 @@ router.get("/search", async (req, res) => {
               fi.flight_id,
               fi.departure_datetime,
               fi.arrival_datetime,
+              fi.price_usd,
               fi.max_sellable_seat,
               fi.status,
               fi.delayed_min,

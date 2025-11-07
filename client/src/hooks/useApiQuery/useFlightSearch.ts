@@ -12,6 +12,7 @@ export type FlightSearchResult = {
   flight_id: number;
   departure_datetime: string;
   arrival_datetime: string;
+  price_usd: number | null;
   max_sellable_seat: number | null;
   status: "on-time" | "delayed" | "cancelled";
   delayed_min: number | null;
