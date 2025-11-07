@@ -5,7 +5,7 @@ import { RowDataPacket, OkPacket } from "mysql2";
 const router = Router();
 
 router.get("/", async (req, res) => {
-  const { airline_id, flight_id } = req.query;
+  const { airline_id, flight_id, passenger_id } = req.query;
 
   const filters: string[] = [];
   const params: Array<number> = [];
@@ -18,13 +18,22 @@ router.get("/", async (req, res) => {
     filters.push("al.airline_id = ?");
     params.push(id);
   }
-
   if (typeof flight_id !== "undefined") {
     const id = Number(flight_id);
     if (!id || Number.isNaN(id)) {
       return res.status(400).json({ error: "flight_id must be a valid number" });
     }
     filters.push("fs.flight_id = ?");
+    params.push(id);
+  }
+  if (typeof passenger_id !== "undefined") {
+    const id = Number(passenger_id);
+    if (!id || Number.isNaN(id)) {
+      return res
+        .status(400)
+        .json({ error: "passenger_id must be a valid number" });
+    }
+    filters.push("p.passenger_id = ?");
     params.push(id);
   }
 

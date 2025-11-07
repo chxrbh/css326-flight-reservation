@@ -31,4 +31,11 @@ export const mockAccounts: MockAccount[] = [
     access_type: "super-admin",
     airline_id: 2,
   },
+  {
+    id: 4,
+    name: "44444",
+    email: "john.doe@gmail.com",
+    access_type: "passenger",
+    passenger_id: 2,
+  },
 ];

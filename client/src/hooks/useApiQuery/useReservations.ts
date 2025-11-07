@@ -28,13 +28,15 @@ export type Reservation = {
 export type ReservationFilters = {
   airlineId?: number;
   flightId?: number;
+  passengerId?: number;
 };
 
 export function useReservations(filters?: ReservationFilters) {
   const airlineId = filters?.airlineId ?? null;
   const flightId = filters?.flightId ?? null;
+  const passengerId = filters?.passengerId ?? null;
   return useQuery<Reservation[]>({
-    queryKey: ["reservations", airlineId, flightId],
+    queryKey: ["reservations", airlineId, flightId, passengerId],
     queryFn: () => {
       const search = new URLSearchParams();
       if (airlineId) {
@@ -42,6 +44,9 @@ export function useReservations(filters?: ReservationFilters) {
       }
       if (flightId) {
         search.set("flight_id", String(flightId));
+      }
+      if (passengerId) {
+        search.set("passenger_id", String(passengerId));
       }
       const query = search.toString();
       return api(`/reservations${query ? `?${query}` : ""}`);
