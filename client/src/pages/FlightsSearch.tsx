@@ -277,18 +277,26 @@ export default function FlightsSearch() {
                         Instance #{flight.instance_id}
                       </div>
                       <Button
-                        disabled={bookReservation.isPending || !passengerId}
+                        disabled={
+                          bookReservation.isPending ||
+                          !passengerId ||
+                          flight.status === "cancelled"
+                        }
                         onClick={() =>
                           handleBook(flight.instance_id, flight.flight_no)
                         }
                         title={
-                          passengerId
-                            ? "Book this flight"
-                            : "Only passenger accounts can book flights"
+                          !passengerId
+                            ? "Only passenger accounts can book flights"
+                            : flight.status === "cancelled"
+                            ? "Cancelled flights cannot be booked"
+                            : "Book this flight"
                         }
                       >
                         {!passengerId
                           ? "Passenger only"
+                          : flight.status === "cancelled"
+                          ? "Unavailable"
                           : bookReservation.isPending &&
                             bookingInstanceId === flight.instance_id
                           ? "Booking..."

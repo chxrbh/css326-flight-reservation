@@ -142,7 +142,7 @@ router.get("/search", async (req, res) => {
        JOIN airline al         ON fs.airline_id = al.airline_id
        JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       ${whereClause}
+       ${whereClause ? `${whereClause} AND` : "WHERE"} fi.status <> 'cancelled'
        ORDER BY fi.departure_datetime ASC`,
       params
     );
