@@ -463,3 +463,61 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+
+
+
+-- View 1: vw_flight_schedule_details       /flight-schedule
+
+CREATE OR REPLACE VIEW vw_flight_schedule_details AS
+SELECT 
+    fs.flight_id,
+    fs.flight_no,
+    fs.aircraft_type,
+    fs.duration,
+    fs.max_seat,
+    fs.status AS schedule_status,
+    al.airline_id,
+    al.name              AS airline_name,
+    al.airline_iata_code AS airline_code,
+    ao.airport_id        AS origin_airport_id,
+    ao.airport_iata_code AS origin_code,
+    ao.name              AS origin_name,
+    ad.airport_id        AS destination_airport_id,
+    ad.airport_iata_code AS destination_code,
+    ad.name              AS destination_name
+FROM flight_schedule fs
+JOIN airline al ON fs.airline_id = al.airline_id
+JOIN airport ao ON fs.origin_airport_id = ao.airport_id
+JOIN airport ad ON fs.destination_airport_id = ad.airport_id;
+
+
+-- View 2: vw_flight_instance_details         /flight-instance, /search
+
+CREATE OR REPLACE VIEW vw_flight_instance_details AS
+SELECT 
+    fi.instance_id,
+    fi.flight_id,
+    fi.departure_datetime,
+    fi.arrival_datetime,
+    fi.max_sellable_seat,
+    fi.status       AS instance_status,
+    fi.delayed_min,
+    fs.flight_no,
+    fs.aircraft_type,
+    fs.duration,
+    fs.max_seat,
+    fs.status       AS schedule_status,
+    al.airline_id,
+    al.name              AS airline_name,
+    al.airline_iata_code AS airline_code,
+    ao.airport_iata_code AS origin_code,
+    ao.name              AS origin_name,
+    ad.airport_iata_code AS destination_code,
+    ad.name              AS destination_name
+FROM flight_instance fi
+JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+JOIN airline al         ON fs.airline_id = al.airline_id
+JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
+JOIN airport ad         ON fs.destination_airport_id = ad.airport_id;
