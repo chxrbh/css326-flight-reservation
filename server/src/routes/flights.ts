@@ -31,24 +31,7 @@ router.get("/flight-schedules/:id", async (req, res) => {
 
 router.get("/flight-schedules", async (_req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT fs.flight_id,
-              fs.flight_no,
-              fs.aircraft_type,
-              fs.duration,
-              fs.max_seat,
-              fs.status,
-              al.airline_id,
-              al.name             AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_schedule fs
-       JOIN airline al             ON fs.airline_id = al.airline_id
-       JOIN airport ao             ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad             ON fs.destination_airport_id = ad.airport_id
-       ORDER BY fs.flight_no`
-    );
+    const [rows] = await pool.query("SELECT * FROM vw_flight_schedule_details");
     res.json(rows);
   } catch (err: any) {
     console.error("GET /flight-schedules error:", err);
@@ -120,31 +103,13 @@ router.get("/search", async (req, res) => {
   try {
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT fi.instance_id,
-              fi.flight_id,
-              fi.departure_datetime,
-              fi.arrival_datetime,
-              fi.max_sellable_seat,
-              fi.status,
-              fi.delayed_min,
-              fs.flight_no,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_id        AS origin_airport_id,
-              ao.airport_iata_code AS origin_code,
-              ao.name              AS origin_name,
-              ad.airport_id        AS destination_airport_id,
-              ad.airport_iata_code AS destination_code,
-              ad.name              AS destination_name
-       FROM flight_instance fi
-       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
-       JOIN airline al         ON fs.airline_id = al.airline_id
-       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       ${whereClause}
-       ORDER BY fi.departure_datetime ASC`,
-      params
-    );
+        `SELECT * 
+        FROM vw_flight_instance_details
+        ${whereClause.replace(/fs\./g, '').replace(/fi\./g, '')}
+        ORDER BY departure_datetime ASC`,
+  params
+);
+
 
     res.json(rows);
   } catch (err: any) {
@@ -205,23 +170,7 @@ router.post("/flight-schedules", async (req, res) => {
     );
 
     const [rows] = await pool.query(
-      `SELECT fs.flight_id,
-              fs.flight_no,
-              fs.aircraft_type,
-              fs.duration,
-              fs.max_seat,
-              fs.status,
-              al.airline_id,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_schedule fs
-       JOIN airline al ON fs.airline_id = al.airline_id
-       JOIN airport ao ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad ON fs.destination_airport_id = ad.airport_id
-       WHERE fs.flight_id = ?
-       LIMIT 1`,
+      "SELECT * FROM vw_flight_schedule_details WHERE flight_id = ? LIMIT 1;" ,
       [result.insertId]
     );
 
@@ -235,27 +184,7 @@ router.post("/flight-schedules", async (req, res) => {
 // List flight instances with schedule context
 router.get("/flight-instances", async (_req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT fi.instance_id,
-              fi.flight_id,
-              fi.departure_datetime,
-              fi.arrival_datetime,
-              fi.max_sellable_seat,
-              fi.status,
-              fi.delayed_min,
-              fs.flight_no,
-              al.airline_id,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_instance fi
-       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
-       JOIN airline al         ON fs.airline_id = al.airline_id
-       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       ORDER BY fi.departure_datetime DESC`
-    );
+    const [rows] = await pool.query("SELECT * FROM vw_flight_instance_details");
     res.json(rows);
   } catch (err: any) {
     console.error("GET /flight-instances error:", err);
@@ -296,27 +225,25 @@ router.post("/flight-instances", async (req, res) => {
     );
 
     const [rows] = await pool.query(
-      `SELECT fi.instance_id,
-              fi.flight_id,
-              fi.departure_datetime,
-              fi.arrival_datetime,
-              fi.max_sellable_seat,
-              fi.status,
-              fi.delayed_min,
-              fs.flight_no,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_instance fi
-       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
-       JOIN airline al         ON fs.airline_id = al.airline_id
-       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       WHERE fi.instance_id = ?
-       LIMIT 1`,
-      [result.insertId]
-    );
+  `SELECT 
+        instance_id,
+        flight_id,
+        departure_datetime,
+        arrival_datetime,
+        max_sellable_seat,
+        instance_status AS status,
+        delayed_min,
+        flight_no,
+        airline_name,
+        airline_code,
+        origin_code,
+        destination_code AS dest_code
+   FROM vw_flight_instance_details
+   WHERE instance_id = ?
+   LIMIT 1`,
+  [result.insertId]
+);
+
 
     res.status(201).json((rows as any[])[0]);
   } catch (err: any) {
@@ -365,27 +292,25 @@ router.put("/flight-instances/:id", async (req, res) => {
     );
 
     const [rows] = await pool.query(
-      `SELECT fi.instance_id,
-              fi.flight_id,
-              fi.departure_datetime,
-              fi.arrival_datetime,
-              fi.max_sellable_seat,
-              fi.status,
-              fi.delayed_min,
-              fs.flight_no,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_instance fi
-       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
-       JOIN airline al         ON fs.airline_id = al.airline_id
-       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       WHERE fi.instance_id = ?
-       LIMIT 1`,
-      [id]
-    );
+  `SELECT 
+        instance_id,
+        flight_id,
+        departure_datetime,
+        arrival_datetime,
+        max_sellable_seat,
+        instance_status AS status,
+        delayed_min,
+        flight_no,
+        airline_name,
+        airline_code,
+        origin_code,
+        destination_code AS dest_code
+   FROM vw_flight_instance_details
+   WHERE instance_id = ?
+   LIMIT 1`,
+  [id]
+);
+
 
     if ((rows as any[]).length === 0) {
       return res.status(404).json({ message: "Flight instance not found" });
