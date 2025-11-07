@@ -273,6 +273,13 @@ export default function Reservation() {
                       { label: "Departure", value: formatDateTime(reservation.departure_datetime) },
                       { label: "Arrival", value: formatDateTime(reservation.arrival_datetime) },
                       {
+                        label: "Price",
+                        value:
+                          reservation.price_usd !== null
+                            ? `$${Number(reservation.price_usd).toFixed(2)}`
+                            : "-",
+                      },
+                      {
                         label: "Status",
                         value: (
                           <span className="text-primary capitalize">

@@ -19,6 +19,12 @@ function formatDateTime(value?: string | null) {
   const date = new Date(value);
   return date.toLocaleString();
 }
+function formatPrice(value?: number | string | null) {
+  if (value === null || value === undefined) return "-";
+  const num = typeof value === "string" ? Number(value) : value;
+  if (Number.isNaN(num)) return "-";
+  return `$${num.toFixed(2)}`;
+}
 
 export default function FlightsSearch() {
   const { toast } = useToast();
@@ -30,8 +36,9 @@ export default function FlightsSearch() {
     destinationAirportId: "",
     departureDate: "",
   });
-  const [searchParams, setSearchParams] =
-    useState<FlightSearchParams | null>({});
+  const [searchParams, setSearchParams] = useState<FlightSearchParams | null>(
+    {}
+  );
 
   const {
     data: flights = [],
@@ -200,7 +207,11 @@ export default function FlightsSearch() {
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1" disabled={loadingResults}>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={loadingResults}
+              >
                 {loadingResults ? "Searching..." : "Search Flights"}
               </Button>
               <Button
@@ -242,8 +253,15 @@ export default function FlightsSearch() {
                   destinationCode={flight.destination_code}
                   destinationName={flight.destination_name}
                   details={[
-                    { label: "Departure", value: formatDateTime(flight.departure_datetime) },
-                    { label: "Arrival", value: formatDateTime(flight.arrival_datetime) },
+                    {
+                      label: "Departure",
+                      value: formatDateTime(flight.departure_datetime),
+                    },
+                    {
+                      label: "Arrival",
+                      value: formatDateTime(flight.arrival_datetime),
+                    },
+                    { label: "Price", value: formatPrice(flight.price_usd) },
                     {
                       label: "Status",
                       value: (
