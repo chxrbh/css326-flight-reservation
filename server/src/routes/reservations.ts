@@ -114,7 +114,7 @@ router.post("/", async (req, res) => {
     }
 
     const [flightRows] = await pool.query<RowDataPacket[]>(
-      `SELECT fs.flight_no
+      `SELECT fs.flight_no, fi.price_usd
        FROM flight_instance fi
        JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
        WHERE fi.instance_id = ?
@@ -127,8 +127,10 @@ router.post("/", async (req, res) => {
     }
 
     const flightNo = String(flightRows[0].flight_no);
+    const instancePrice = flightRows[0].price_usd ?? null;
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
-    // const bookingDate = new Date().toISOString().slice(0, 10);
+    const bookingDate = new Date().toISOString().slice(0, 10);
+    const ticketPrice = price_usd ?? instancePrice;
 
     const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?, ?)`, [
       ticketNo,
