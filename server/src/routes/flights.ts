@@ -349,20 +349,19 @@ router.put("/flight-instances/:id", async (req, res) => {
       });
     }
 
-    await pool.query(
-      `UPDATE flight_instance
-       SET flight_id = ?, departure_datetime = ?, arrival_datetime = ?, max_sellable_seat = ?, status = ?, delayed_min = ?
-       WHERE instance_id = ?`,
-      [
-        Number(flight_id),
-        departure_datetime,
-        arrival_datetime,
-        max_sellable_seat,
-        status,
-        delayed_min ?? 0,
-        id,
-      ]
-    );
+    // Only call procedure if status is being updated
+if (status) {
+  await pool.query(`CALL UpdateFlightStatus(?, ?)`, [id, status]);
+}
+
+// Update other fields manually
+await pool.query(
+  `UPDATE flight_instance
+   SET flight_id = ?, departure_datetime = ?, arrival_datetime = ?, max_sellable_seat = ?, delayed_min = ?
+   WHERE instance_id = ?`,
+  [Number(flight_id), departure_datetime, arrival_datetime, max_sellable_seat, delayed_min ?? 0, id]
+);
+
 
     const [rows] = await pool.query(
       `SELECT fi.instance_id,

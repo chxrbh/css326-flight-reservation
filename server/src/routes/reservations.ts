@@ -116,12 +116,12 @@ router.post("/", async (req, res) => {
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
     const bookingDate = new Date().toISOString().slice(0, 10);
 
-    const [result]: any = await pool.query(
-      `INSERT INTO ticket
-         (ticket_no, passenger_id, instance_id, seat, price_usd, booking_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'booked')`,
-      [ticketNo, passengerId, instanceId, seat || null, price_usd ?? null, bookingDate]
-    );
+    const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?)`, [
+  passengerId,
+  instanceId,
+  price_usd ?? 0,
+  seat ?? null
+]);
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT t.ticket_id,
@@ -187,10 +187,18 @@ router.patch("/:ticketId/status", async (req, res) => {
     }
     params.push(ticketId);
 
-    const [result] = await pool.query<OkPacket>(
-      `UPDATE ticket SET ${fields.join(", ")} WHERE ticket_id = ?`,
-      params
-    );
+let result: OkPacket;
+if (status === "cancelled") {
+  // Use stored procedure to cancel
+  [result] = await pool.query<OkPacket>(`CALL CancelTicket(?)`, [ticketId]);
+} else {
+  // Keep other status updates
+  [result] = await pool.query<OkPacket>(
+    `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
+    [status, seat || null, ticketId]
+  );
+}
+
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Ticket not found" });

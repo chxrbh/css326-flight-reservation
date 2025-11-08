@@ -463,3 +463,90 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+
+
+-- 3 Stored Procedures
+
+-- 1️⃣ Book a ticket
+DELIMITER $$
+CREATE PROCEDURE BookTicket(
+    IN p_passenger_id INT,
+    IN p_instance_id INT,
+    IN p_price_usd DECIMAL(10,2),
+    IN p_seat VARCHAR(10)
+)
+BEGIN
+    INSERT INTO ticket (ticket_no, passenger_id, instance_id, price_usd, status, booking_date, seat)
+    VALUES (CONCAT('TCK', LPAD(FLOOR(RAND() * 999999),6,'0')), 
+            p_passenger_id, p_instance_id, p_price_usd, 
+            'booked', CURDATE(), p_seat);
+END$$
+DELIMITER ;
+
+-- 2️⃣ Cancel a ticket
+DELIMITER $$
+CREATE PROCEDURE CancelTicket(IN p_ticket_id INT)
+BEGIN
+    UPDATE ticket
+    SET status = 'cancelled'
+    WHERE ticket_id = p_ticket_id;
+END$$
+DELIMITER ;
+
+-- 3️⃣ Update flight instance status
+DELIMITER $$
+CREATE PROCEDURE UpdateFlightStatus(IN p_instance_id INT, IN p_status ENUM('on time','delayed','cancelled'))
+BEGIN
+    UPDATE flight_instance
+    SET status = p_status
+    WHERE instance_id = p_instance_id;
+END$$
+DELIMITER ;
+
+
+
+-- 3 Triggers
+
+-- 1️⃣ Release gate automatically after flight cancellation
+DELIMITER $$
+CREATE TRIGGER release_gate_after_cancel
+AFTER UPDATE ON flight_instance
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'cancelled' AND OLD.status <> 'cancelled' THEN
+        UPDATE gate g
+        JOIN gate_assignment ga ON g.gate_id = ga.gate_id
+        SET g.status = 'active'
+        WHERE ga.instance_id = NEW.instance_id
+          AND ga.occupy_start_utc <= NOW()
+          AND ga.occupy_end_utc >= NOW();
+    END IF;
+END$$
+DELIMITER ;
+
+-- 2️⃣ Auto-close gate after assignment
+DELIMITER $$
+CREATE TRIGGER update_gate_status_after_assignment_insert
+AFTER INSERT ON gate_assignment
+FOR EACH ROW
+BEGIN
+    UPDATE gate
+    SET status = 'closed'
+    WHERE gate_id = NEW.gate_id;
+END$$
+DELIMITER ;
+
+-- 3️⃣ Prevent invalid flight times
+DELIMITER $$
+CREATE TRIGGER check_flight_times
+BEFORE INSERT ON flight_instance
+FOR EACH ROW
+BEGIN
+    IF NEW.departure_datetime >= NEW.arrival_datetime THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Departure must be earlier than arrival';
+    END IF;
+END$$
+DELIMITER ;
