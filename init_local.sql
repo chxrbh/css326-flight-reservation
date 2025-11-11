@@ -711,6 +711,7 @@ COMMIT;
 
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
+<<<<<<< HEAD
 -- 3 Stored Procedures
 -- 1️⃣ Book a ticket
 DELIMITER $$
@@ -847,3 +848,15 @@ BEGIN
 END $$
 
 DELIMITER ;
+=======
+
+
+-- Step 1: Create the user
+CREATE USER 'user'@'localhost' IDENTIFIED BY 'root';
+
+-- Step 2: Grant limited privileges
+GRANT SELECT, INSERT, UPDATE, DELETE ON css326_project_airport_new.* TO 'user'@'localhost';
+
+-- Step 3: Apply changes
+FLUSH PRIVILEGES;
+>>>>>>> 2fa4421 (create 'user' account)
