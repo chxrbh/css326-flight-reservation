@@ -7,6 +7,7 @@ import flightsRouter from "./routes/flights";
 import airportsRouter from "./routes/airports";
 import reservationsRouter from "./routes/reservations";
 import authRouter from "./routes/auth";
+import testRouter from "./routes/test";
 
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/api/airports", airportsRouter);
 app.use("/api", flightsRouter);
 app.use("/api/reservations", reservationsRouter);
 app.use("/api/auth", authRouter);
+app.use("/api", testRouter);
 
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () =>
