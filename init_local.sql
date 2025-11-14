@@ -460,17 +460,11 @@ ALTER TABLE `ticket`
   ADD CONSTRAINT `ticket_ibfk_2` FOREIGN KEY (`instance_id`) REFERENCES `flight_instance` (`instance_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
-
-
 -- Step 1: Create the user
-CREATE USER 'user'@'localhost' IDENTIFIED BY 'root';
+CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
 
 -- Step 2: Grant limited privileges
-GRANT SELECT, INSERT, UPDATE, DELETE ON css326_project_airport_new.* TO 'user'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON css326_project_airport_new.* TO 'webuser'@'localhost';
 
 -- Step 3: Apply changes
 FLUSH PRIVILEGES;
