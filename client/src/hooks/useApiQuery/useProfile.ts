@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export type ProfileResponse = {
@@ -32,5 +32,44 @@ export function useProfile(accountId?: number | null) {
     queryKey: ["profile", accountId],
     queryFn: () => api(`/auth/profile/${accountId}`),
     enabled: typeof accountId === "number" && accountId > 0,
+  });
+}
+
+export function useUpdatePassengerProfile(accountId?: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      first_name: string;
+      last_name: string;
+      gender?: string | null;
+      dob?: string | null;
+      phone?: string | null;
+      nationality?: string | null;
+    }) =>
+      api(`/auth/profile/${accountId}/passenger`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", accountId] });
+    },
+  });
+}
+
+export function useUpdateAirlineAdminProfile(accountId?: number | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      first_name: string;
+      last_name: string;
+      hire_date?: string | null;
+    }) =>
+      api(`/auth/profile/${accountId}/airline-admin`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", accountId] });
+    },
   });
 }

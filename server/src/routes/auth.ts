@@ -136,4 +136,126 @@ router.get("/profile/:accountId", async (req, res) => {
   }
 });
 
+router.put("/profile/:accountId/passenger", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "Invalid account id" });
+  }
+
+  const { first_name, last_name, gender, dob, phone, nationality } =
+    req.body || {};
+
+  if (!first_name || !last_name) {
+    return res.status(400).json({ error: "first_name and last_name are required" });
+  }
+
+  const normalize = (value?: string | null) => {
+    const trimmed = typeof value === "string" ? value.trim() : "";
+    return trimmed.length > 0 ? trimmed : null;
+  };
+  const normalizeDate = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    const date = new Date(trimmed);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toISOString().slice(0, 10);
+  };
+
+  try {
+    const [result]: any = await pool.query(
+      `UPDATE passenger
+       SET first_name = ?, last_name = ?, gender = ?, dob = ?, phone = ?, nationality = ?
+       WHERE account_id = ?`,
+      [
+        first_name.trim(),
+        last_name.trim(),
+        normalize(gender),
+        normalizeDate(dob),
+        normalize(phone),
+        normalize(nationality),
+        accountId,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Passenger record not found" });
+    }
+
+    const [rows]: any = await pool.query(
+      "SELECT * FROM passenger WHERE account_id = ? LIMIT 1",
+      [accountId]
+    );
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Passenger profile update error:", error);
+    res.status(500).json({ error: "Failed to update passenger profile" });
+  }
+});
+
+router.put("/profile/:accountId/airline-admin", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "Invalid account id" });
+  }
+
+  const { first_name, last_name, hire_date } = req.body || {};
+
+  if (!first_name || !last_name) {
+    return res.status(400).json({ error: "first_name and last_name are required" });
+  }
+
+  const normalize = (value?: string | null) => {
+    const trimmed = typeof value === "string" ? value.trim() : "";
+    return trimmed.length > 0 ? trimmed : null;
+  };
+  const normalizeDate = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    const date = new Date(trimmed);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toISOString().slice(0, 10);
+  };
+
+  try {
+    const [result]: any = await pool.query(
+      `UPDATE airline_admin
+       SET first_name = ?, last_name = ?, hire_date = ?
+       WHERE account_id = ?`,
+      [
+        first_name.trim(),
+        last_name.trim(),
+        normalizeDate(hire_date),
+        accountId,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Airline admin record not found" });
+    }
+
+    const [rows]: any = await pool.query(
+      `SELECT aa.*, al.name AS airline_name, al.airline_iata_code AS airline_code
+       FROM airline_admin aa
+       JOIN airline al ON aa.airline_id = al.airline_id
+       WHERE aa.account_id = ?
+       LIMIT 1`,
+      [accountId]
+    );
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("Airline admin profile update error:", error);
+    res.status(500).json({ error: "Failed to update airline admin profile" });
+  }
+});
+
 export default router;
