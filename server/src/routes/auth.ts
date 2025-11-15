@@ -54,10 +54,11 @@ router.post("/signin", async (req, res) => {
     // 1️⃣ Compare hashed passwords (SHA2(?, 256)) but also allow legacy plaintext rows
     // so that seed data from init_local.sql continues to work.
     const [rows]: any = await pool.query(
-      `SELECT *
-       FROM account
-       WHERE email = ?
-         AND (password = SHA2(?, 256) OR password = ?)`,
+      `SELECT acc.*, aa.airline_id
+       FROM account acc
+       LEFT JOIN airline_admin aa ON acc.account_id = aa.account_id
+       WHERE acc.email = ?
+         AND (acc.password = SHA2(?, 256) OR acc.password = ?)`,
       [email, password, password]
     );
 
@@ -74,16 +75,6 @@ router.post("/signin", async (req, res) => {
         [account.account_id]
       );
       passenger = passengerRows[0] || null;
-    }
-
-    if (account.access_type === "airline-admin") {
-      const [adminRows]: any = await pool.query(
-        "SELECT airline_id FROM airline_admin WHERE account_id = ? LIMIT 1",
-        [account.account_id]
-      );
-      if (adminRows.length > 0) {
-        account.airline_id = adminRows[0].airline_id;
-      }
     }
 
     res.json({
