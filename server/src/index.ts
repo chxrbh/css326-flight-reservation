@@ -8,6 +8,7 @@ import airportsRouter from "./routes/airports";
 import reservationsRouter from "./routes/reservations";
 import authRouter from "./routes/auth";
 import testRouter from "./routes/test";
+import airlineAdminsRouter from "./routes/airlineAdmins";
 
 
 const app = express();
@@ -25,6 +26,7 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 //app.use("/api/users", usersRouter);
 app.use("/api/airlines", airlinesRouter);
+app.use("/api/airline-admins", airlineAdminsRouter);
 app.use("/api/airports", airportsRouter);
 app.use("/api", flightsRouter);
 app.use("/api/reservations", reservationsRouter);
