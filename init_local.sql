@@ -464,7 +464,7 @@ COMMIT;
 CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
 
 -- Step 2: Grant limited privileges
-GRANT SELECT, INSERT, UPDATE, DELETE ON css326_project_airport_new.* TO 'webuser'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON css326_project_airport_new.* TO 'webuser'@'localhost';
 
 -- Step 3: Apply changes
 FLUSH PRIVILEGES;
