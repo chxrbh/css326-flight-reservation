@@ -13,12 +13,7 @@ import {
 } from "@/hooks/useApiQuery";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return date.toLocaleString();
-}
+import { formatDateTime } from "@/lib/date";
 function formatPrice(value?: number | string | null) {
   if (value === null || value === undefined) return "-";
   const num = typeof value === "string" ? Number(value) : value;

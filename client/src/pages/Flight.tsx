@@ -8,12 +8,7 @@ import type { FlightInstance } from "@/hooks/useApiQuery";
 import { useFlightInstances } from "@/hooks/useApiQuery";
 import FlightInfoCard from "@/components/FlightInfoCard";
 import { useAuth } from "@/context/AuthContext";
-
-function formatDT(dt?: string) {
-  if (!dt) return "-";
-  const d = new Date(dt);
-  return d.toLocaleString();
-}
+import { formatDateTime } from "@/lib/date";
 
 export default function Flight() {
   const { data: instances = [], isLoading, isError } = useFlightInstances();
@@ -73,8 +68,14 @@ export default function Flight() {
               originCode={instance.origin_code}
               destinationCode={instance.dest_code}
               details={[
-                { label: "Departure", value: formatDT(instance.departure_datetime) },
-                { label: "Arrival", value: formatDT(instance.arrival_datetime) },
+                {
+                  label: "Departure",
+                  value: formatDateTime(instance.departure_datetime),
+                },
+                {
+                  label: "Arrival",
+                  value: formatDateTime(instance.arrival_datetime),
+                },
                 {
                   label: "Status",
                   value: (

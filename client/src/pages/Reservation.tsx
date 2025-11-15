@@ -11,16 +11,7 @@ import {
 } from "@/hooks/useApiQuery";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString();
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString();
-}
+import { formatDate, formatDateTime } from "@/lib/date";
 
 export default function Reservation() {
   const { toast } = useToast();

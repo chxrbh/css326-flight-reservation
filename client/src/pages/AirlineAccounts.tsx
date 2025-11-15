@@ -26,6 +26,7 @@ import {
   useDeleteAirlineAdmin,
 } from "@/hooks/useApiQuery";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate } from "@/lib/date";
 
 type AdminForm = {
   firstName: string;
@@ -300,11 +301,7 @@ export default function AirlineAccounts() {
                       {admin.firstName} {admin.lastName}
                     </TableCell>
                     <TableCell>{admin.email}</TableCell>
-                    <TableCell>
-                      {admin.hireDate
-                        ? new Date(admin.hireDate).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
+                    <TableCell>{formatDate(admin.hireDate)}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
