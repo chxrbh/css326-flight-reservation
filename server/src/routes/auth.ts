@@ -88,4 +88,52 @@ router.post("/signin", async (req, res) => {
   }
 });
 
+// ✅ PROFILE — fetch account details + role-specific data
+router.get("/profile/:accountId", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "Invalid account id" });
+  }
+
+  try {
+    const [accountRows]: any = await pool.query(
+      "SELECT account_id, email, access_type FROM account WHERE account_id = ? LIMIT 1",
+      [accountId]
+    );
+
+    if (accountRows.length === 0) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    const account = accountRows[0];
+    let passenger: any = null;
+    let airlineAdmin: any = null;
+
+    if (account.access_type === "passenger") {
+      const [rows]: any = await pool.query(
+        "SELECT * FROM passenger WHERE account_id = ? LIMIT 1",
+        [accountId]
+      );
+      passenger = rows[0] || null;
+    }
+
+    if (account.access_type === "airline-admin") {
+      const [rows]: any = await pool.query(
+        `SELECT aa.*, al.name AS airline_name, al.airline_iata_code AS airline_code
+         FROM airline_admin aa
+         JOIN airline al ON aa.airline_id = al.airline_id
+         WHERE aa.account_id = ?
+         LIMIT 1`,
+        [accountId]
+      );
+      airlineAdmin = rows[0] || null;
+    }
+
+    res.json({ account, passenger, airlineAdmin });
+  } catch (error) {
+    console.error("Profile fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
 export default router;

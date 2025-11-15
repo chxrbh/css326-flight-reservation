@@ -4,6 +4,7 @@ import FlightsSearch from "@/pages/FlightsSearch";
 import Reservation from "@/pages/Reservation";
 import AuthPage from "@/pages/Auth";
 import AirlineAccounts from "@/pages/AirlineAccounts";
+import ProfilePage from "@/pages/Profile";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -78,6 +79,16 @@ export default function App() {
                       allowed={["passenger", "airline-admin", "super-admin"]}
                     >
                       <Reservation />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute
+                      allowed={["passenger", "airline-admin", "super-admin"]}
+                    >
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />

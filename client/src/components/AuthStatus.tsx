@@ -23,14 +23,19 @@ export default function AuthStatus() {
               {account.email} • {accessType?.replace("-", " ")}
             </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={logout}
-            className="w-full sm:w-auto"
-          >
-            Sign out
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button asChild variant="secondary" size="sm" className="flex-1 sm:flex-none">
+              <Link to="/profile">Profile</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="flex-1 sm:flex-none"
+            >
+              Sign out
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
