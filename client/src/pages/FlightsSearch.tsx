@@ -87,6 +87,14 @@ export default function FlightsSearch() {
   };
 
   const handleBook = (instanceId: number, flightNo: string) => {
+    if (!account) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in before booking a flight.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!passengerId) {
       toast({
         title: "Booking unavailable",
@@ -294,7 +302,7 @@ export default function FlightsSearch() {
                         }
                       >
                         {!passengerId
-                          ? "Passenger only"
+                          ? "Sign in with passenger account"
                           : flight.status === "cancelled"
                           ? "Unavailable"
                           : bookReservation.isPending &&

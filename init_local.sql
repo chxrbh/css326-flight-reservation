@@ -37,11 +37,11 @@ CREATE TABLE `account` (
 --
 -- Dumping data for table `account`
 --
-
+-- TO DO: Passwords should be hashed in production systems.
 INSERT INTO `account` (`account_id`, `email`, `password`, `access_type`) VALUES
-(1, 'john.doe@gmail.com', 'pass1234', 'passenger'),
-(2, 'jane.airline@skyasia.com', 'admin1234', 'airline-admin'),
-(3, 'admin@system.com', 'rootpass', 'super-admin');
+(1, 'john.doe@gmail.com', SHA2('pass1234', 256), 'passenger'),
+(2, 'jane.airline@skyasia.com', SHA2('admin1234', 256), 'airline-admin'),
+(3, 'admin@system.com', SHA2('rootpass', 256), 'super-admin');
 
 -- --------------------------------------------------------
 
@@ -235,8 +235,7 @@ CREATE TABLE `passenger` (
 --
 
 INSERT INTO `passenger` (`passenger_id`, `first_name`, `last_name`, `gender`, `dob`, `phone`, `nationality`, `account_id`) VALUES
-(1, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1),
-(2, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1);
+(1, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1);
 
 -- --------------------------------------------------------
 

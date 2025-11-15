@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
 import Airlines from "@/pages/Airlines";
 import Flight from "@/pages/Flight";
 import FlightsSearch from "@/pages/FlightsSearch";
 import Reservation from "@/pages/Reservation";
+import AuthPage from "@/pages/Auth";
+import AirlineAccounts from "@/pages/AirlineAccounts";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -11,26 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AuthStatus from "@/components/AuthStatus";
 import RoleNav from "@/components/RoleNav";
 
-type User = { id: number; name: string; email: string };
-
 export default function App() {
-  // const [users, setUsers] = useState<User[]>([]);
-  // const [loading, setLoading] = useState(true);
-
-  // async function refresh() {
-  //   setLoading(true);
-  //   const res = await fetch(
-  //     (import.meta as any).env.VITE_API_URL + "/api/users"
-  //   );
-  //   const data = await res.json();
-  //   setUsers(data);
-  //   setLoading(false);
-  // }
-
-  // useEffect(() => {
-  //   refresh();
-  // }, []);
-
   const queryClient = new QueryClient();
 
   return (
@@ -60,6 +42,15 @@ export default function App() {
                   path="/"
                   element={<Navigate to="/search" replace />}
                 />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route
+                  path="/airline-admins"
+                  element={
+                    <ProtectedRoute allowed={["super-admin"]}>
+                      <AirlineAccounts />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/airlines"
                   element={
@@ -78,13 +69,7 @@ export default function App() {
                 />
                 <Route
                   path="/search"
-                  element={
-                    <ProtectedRoute
-                      allowed={["passenger", "airline-admin", "super-admin"]}
-                    >
-                      <FlightsSearch />
-                    </ProtectedRoute>
-                  }
+                  element={<FlightsSearch />}
                 />
                 <Route
                   path="/reservation"
