@@ -241,6 +241,7 @@ router.get("/flight-instances", async (_req, res) => {
               fi.flight_id,
               fi.departure_datetime,
               fi.arrival_datetime,
+              fi.price_usd,
               fi.max_sellable_seat,
               fi.status,
               fi.delayed_min,
@@ -271,25 +272,40 @@ router.post("/flight-instances", async (req, res) => {
       flight_id,
       departure_datetime,
       arrival_datetime,
+      price_usd,
       status = "on-time",
       max_sellable_seat = null,
       delayed_min = 0,
     } = req.body || {};
 
-    if (!flight_id || !departure_datetime || !arrival_datetime) {
+    if (
+      !flight_id ||
+      !departure_datetime ||
+      !arrival_datetime ||
+      price_usd === undefined
+    ) {
       return res.status(400).json({
-        error: "flight_id, departure_datetime, arrival_datetime are required",
+        error:
+          "flight_id, departure_datetime, arrival_datetime, price_usd are required",
       });
+    }
+
+    const numericPrice = Number(price_usd);
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      return res
+        .status(400)
+        .json({ error: "price_usd must be a valid non-negative number" });
     }
 
     const [result]: any = await pool.query(
       `INSERT INTO flight_instance
-       (flight_id, departure_datetime, arrival_datetime, max_sellable_seat, status, delayed_min)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       (flight_id, departure_datetime, arrival_datetime, price_usd, max_sellable_seat, status, delayed_min)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         Number(flight_id),
         departure_datetime,
         arrival_datetime,
+        numericPrice,
         max_sellable_seat,
         status,
         delayed_min ?? 0,
@@ -301,6 +317,7 @@ router.post("/flight-instances", async (req, res) => {
               fi.flight_id,
               fi.departure_datetime,
               fi.arrival_datetime,
+              fi.price_usd,
               fi.max_sellable_seat,
               fi.status,
               fi.delayed_min,
@@ -402,6 +419,7 @@ router.put("/flight-instances/:id", async (req, res) => {
               fi.flight_id,
               fi.departure_datetime,
               fi.arrival_datetime,
+              fi.price_usd,
               fi.max_sellable_seat,
               fi.status,
               fi.delayed_min,

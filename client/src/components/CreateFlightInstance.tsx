@@ -18,11 +18,10 @@ import { CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   useFlightSchedules,
-  useAirports,
-  useAirlines,
   useCreateFlightInstance,
   useUpdateFlightInstance,
 } from "@/hooks/useApiQuery";
+import { useAuth } from "@/context/AuthContext";
 
 function toMySQLDateTime(local: string) {
   if (!local) return local;
@@ -54,13 +53,36 @@ type InstanceHandle = {
   openWith: (data: any) => void;
 };
 
+type InstanceFormState = {
+  instance_id: number | null;
+  flight_id: string;
+  status: "on-time" | "delayed" | "cancelled";
+  flight_date: string;
+  departure_datetime: string;
+  arrival_datetime: string;
+  price_usd: string;
+  delayed_min: string;
+};
+
+const createEmptyForm = (): InstanceFormState => ({
+  instance_id: null,
+  flight_id: "",
+  status: "on-time",
+  flight_date: "",
+  departure_datetime: "",
+  arrival_datetime: "",
+  price_usd: "",
+  delayed_min: "0",
+});
+
 const CreateFlightInstance = forwardRef<InstanceHandle | null>(
   function CreateFlightInstance(_, ref) {
     const { toast } = useToast();
     const { data: schedules = [], isLoading: loadingSchedules } =
       useFlightSchedules();
-    const { data: airports = [] } = useAirports();
-    const { data: airlines = [] } = useAirlines() as any;
+    const { account, accessType } = useAuth();
+    const isAirlineAdmin = accessType === "airline-admin";
+    const adminAirlineId = account?.airline_id ?? null;
 
     const scheduleById = useMemo(() => {
       const map: Record<string, { duration: string | null }> = {};
@@ -69,21 +91,31 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       return map;
     }, [schedules]);
 
+    const scheduleOptions = useMemo(() => {
+      if (!isAirlineAdmin || !adminAirlineId) return schedules;
+      return schedules.filter((s) => s.airline_id === adminAirlineId);
+    }, [schedules, isAirlineAdmin, adminAirlineId]);
+
     const createInstance = useCreateFlightInstance();
     const updateInstance = useUpdateFlightInstance();
 
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({
-      instance_id: null as number | null,
-      flight_id: "",
-      status: "on-time" as "on-time" | "delayed" | "cancelled",
-      flight_date: "",
-      departure_datetime: "",
-      arrival_datetime: "",
-      delayed_min: "0",
-    });
+    const [form, setForm] = useState<InstanceFormState>(() => createEmptyForm());
     const [arrivalTouched, setArrivalTouched] = useState(false);
     const [scheduledArrivalLocal, setScheduledArrivalLocal] = useState("");
+
+    const isEditing = Boolean(form.instance_id);
+
+    const resetForm = () => {
+      setForm(createEmptyForm());
+      setArrivalTouched(false);
+      setScheduledArrivalLocal("");
+    };
+
+    const handleDialogToggle = (next: boolean) => {
+      setOpen(next);
+      if (!next) resetForm();
+    };
 
     useImperativeHandle(ref, () => ({
       openWith(data: any) {
@@ -98,11 +130,15 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
           flight_date: "",
           departure_datetime: fromMySQLDateTime(data.departure_datetime),
           arrival_datetime: arrivalLocal,
-          delayed_min: String(currentDelay),
+          price_usd:
+            data.price_usd === undefined || data.price_usd === null
+              ? ""
+              : String(data.price_usd),
+          delayed_min: String(currentDelay || 0),
         });
         setScheduledArrivalLocal(scheduled);
         setArrivalTouched(false);
-        setOpen(true);
+        handleDialogToggle(true);
       },
     }));
 
@@ -123,34 +159,13 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
     }
 
-    const isEditing = Boolean(form.instance_id);
-
     const handleSave = () => {
-      if (!form.instance_id) {
-        if (
-          !form.flight_id ||
-          !form.departure_datetime ||
-          !form.arrival_datetime
-        ) {
-          toast({
-            title: "Missing fields",
-            description: "Schedule, departure, and arrival are required.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      if (form.instance_id) {
-        const delayMinutes =
-          form.status === "delayed"
-            ? Number(form.delayed_min || 0)
-            : undefined;
+      if (isEditing) {
+        const rawDelay =
+          form.status === "delayed" ? Number(form.delayed_min || 0) : undefined;
         if (
           form.status === "delayed" &&
-          (delayMinutes === undefined ||
-            Number.isNaN(delayMinutes) ||
-            delayMinutes <= 0)
+          (rawDelay === undefined || Number.isNaN(rawDelay) || rawDelay <= 0)
         ) {
           toast({
             title: "Invalid delay",
@@ -159,20 +174,15 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
           });
           return;
         }
-      }
 
-      if (form.instance_id) {
-        const rawDelay =
-          form.status === "delayed"
-            ? Number(form.delayed_min || 0)
-            : undefined;
         const delayMinutes =
           rawDelay !== undefined && !Number.isNaN(rawDelay) && rawDelay > 0
             ? rawDelay
             : undefined;
+
         updateInstance.mutate(
           {
-            instance_id: form.instance_id,
+            instance_id: form.instance_id as number,
             status: form.status,
             delayed_min: delayMinutes,
           },
@@ -182,17 +192,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                 title: "Updated",
                 description: "Flight instance updated.",
               });
-              setOpen(false);
-              setForm({
-                instance_id: null,
-                flight_id: "",
-                status: "on-time",
-                flight_date: "",
-                departure_datetime: "",
-                arrival_datetime: "",
-                delayed_min: "0",
-              });
-              setScheduledArrivalLocal("");
+              handleDialogToggle(false);
             },
             onError: (e: any) =>
               toast({
@@ -202,44 +202,62 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
               }),
           }
         );
-      } else {
-        createInstance.mutate(
-          {
-            flight_id: Number(form.flight_id),
-            status: form.status,
-            departure_datetime: toMySQLDateTime(form.departure_datetime),
-            arrival_datetime: toMySQLDateTime(form.arrival_datetime),
-          },
-          {
-            onSuccess: () => {
-              toast({
-                title: "Created",
-                description: "Flight instance created.",
-              });
-              setOpen(false);
-              setForm({
-                instance_id: null,
-                flight_id: "",
-                status: "on-time",
-                flight_date: "",
-                departure_datetime: "",
-                arrival_datetime: "",
-                delayed_min: "0",
-              });
-            },
-            onError: (e: any) =>
-              toast({
-                title: "Create failed",
-                description: e?.message || "Server error",
-                variant: "destructive",
-              }),
-          }
-        );
+        return;
       }
+
+      if (
+        !form.flight_id ||
+        !form.departure_datetime ||
+        !form.arrival_datetime ||
+        form.price_usd === ""
+      ) {
+        toast({
+          title: "Missing fields",
+          description:
+            "Schedule, departure, arrival, and price are required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const priceValue = Number(form.price_usd);
+      if (Number.isNaN(priceValue) || priceValue < 0) {
+        toast({
+          title: "Invalid price",
+          description: "Enter a valid non-negative price.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      createInstance.mutate(
+        {
+          flight_id: Number(form.flight_id),
+          status: form.status,
+          departure_datetime: toMySQLDateTime(form.departure_datetime),
+          arrival_datetime: toMySQLDateTime(form.arrival_datetime),
+          price_usd: priceValue,
+        },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Created",
+              description: "Flight instance created.",
+            });
+            handleDialogToggle(false);
+          },
+          onError: (e: any) =>
+            toast({
+              title: "Create failed",
+              description: e?.message || "Server error",
+              variant: "destructive",
+            }),
+        }
+      );
     };
 
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleDialogToggle}>
         <DialogTrigger asChild>
           <Button>
             <CalendarPlus className="h-4 w-4" /> Create Instance
@@ -281,11 +299,13 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   <option value="">
                     {loadingSchedules
                       ? "Loading schedules..."
-                      : schedules.length === 0
-                      ? "No schedules available"
+                      : scheduleOptions.length === 0
+                      ? isAirlineAdmin
+                        ? "No schedules for your airline"
+                        : "No schedules available"
                       : "Select schedule..."}
                   </option>
-                  {schedules.map((s) => (
+                  {scheduleOptions.map((s) => (
                     <option key={s.flight_id} value={String(s.flight_id)}>
                       {s.flight_no} - {s.airline_name} ({s.origin_code} →{" "}
                       {s.dest_code})
@@ -407,6 +427,19 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   }}
                 />
               </div>
+              <div>
+                <Label>Price (USD) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price_usd}
+                  disabled={isEditing}
+                  onChange={(e) =>
+                    setForm((s) => ({ ...s, price_usd: e.target.value }))
+                  }
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -426,7 +459,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   ? "Creating..."
                   : "Create Instance"}
               </Button>
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button variant="outline" onClick={() => handleDialogToggle(false)}>
                 Cancel
               </Button>
             </div>

@@ -18,6 +18,7 @@ export type FlightInstance = {
   flight_id: number;
   departure_datetime: string;
   arrival_datetime: string;
+  price_usd: number;
   status: "on-time" | "delayed" | "cancelled";
   delayed_min: number | null;
   max_sellable_seat: number | null;
@@ -56,6 +57,7 @@ export function useCreateFlightInstance() {
   return useMutation({
     mutationFn: (payload: {
       flight_id: number;
+      price_usd: number;
       status?: "on-time" | "delayed" | "cancelled";
       departure_datetime: string; // ISO local -> server expects MySQL-compatible string
       arrival_datetime: string;
@@ -67,20 +69,22 @@ export function useCreateFlightInstance() {
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["flight-instances"] });
       const prev = qc.getQueryData<FlightInstance[]>(["flight-instances"]);
-      const temp: any = {
+      const temp: FlightInstance = {
         instance_id: Date.now(),
         flight_id: vars.flight_id,
         departure_datetime: vars.departure_datetime,
         arrival_datetime: vars.arrival_datetime,
-        status: (vars.status || "on-time") as any,
+        price_usd: vars.price_usd,
+        status: (vars.status || "on-time") as FlightInstance["status"],
         delayed_min: 0,
         max_sellable_seat: null,
         flight_no: "",
+        airline_id: 0,
         airline_name: "",
         airline_code: "",
         origin_code: "",
         dest_code: "",
-      } as FlightInstance;
+      };
       qc.setQueryData<FlightInstance[]>(["flight-instances"], (old) => [
         ...(old ?? []),
         temp,

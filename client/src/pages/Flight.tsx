@@ -15,6 +15,13 @@ function formatDT(dt?: string) {
   return d.toLocaleString();
 }
 
+function formatPrice(value?: number | string | null) {
+  if (value === null || value === undefined) return "-";
+  const num = typeof value === "string" ? Number(value) : value;
+  if (Number.isNaN(num)) return "-";
+  return `$${num.toFixed(2)}`;
+}
+
 export default function Flight() {
   const { data: instances = [], isLoading, isError } = useFlightInstances();
   const { account, accessType } = useAuth();
@@ -83,6 +90,7 @@ export default function Flight() {
                     </span>
                   ),
                 },
+                { label: "Price", value: formatPrice(instance.price_usd) },
               ]}
               headerAction={
                 <Button
