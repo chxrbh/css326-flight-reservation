@@ -124,6 +124,7 @@ router.get("/search", async (req, res) => {
               fi.flight_id,
               fi.departure_datetime,
               fi.arrival_datetime,
+              fi.price_usd,
               fi.max_sellable_seat,
               fi.status,
               fi.delayed_min,
@@ -141,7 +142,7 @@ router.get("/search", async (req, res) => {
        JOIN airline al         ON fs.airline_id = al.airline_id
        JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       ${whereClause}
+       ${whereClause ? `${whereClause} AND` : "WHERE"} fi.status <> 'cancelled'
        ORDER BY fi.departure_datetime ASC`,
       params
     );

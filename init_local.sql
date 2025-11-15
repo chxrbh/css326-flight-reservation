@@ -123,6 +123,7 @@ CREATE TABLE `flight_instance` (
   `flight_id` int(11) NOT NULL,
   `departure_datetime` datetime DEFAULT NULL,
   `arrival_datetime` datetime DEFAULT NULL,
+  `price_usd` DECIMAL(10,2) NOT NULL,
   `max_sellable_seat` int(11) DEFAULT NULL,
   `status` enum('on-time','delayed','cancelled') DEFAULT 'on-time',
   `delayed_min` int(11) DEFAULT NULL
@@ -132,11 +133,11 @@ CREATE TABLE `flight_instance` (
 -- Dumping data for table `flight_instance`
 --
 
-INSERT INTO `flight_instance` (`instance_id`, `flight_id`, `departure_datetime`, `arrival_datetime`, `max_sellable_seat`, `status`, `delayed_min`) VALUES
-(1, 1, '2025-10-10 09:00:00', '2025-10-10 11:30:00', 175, 'on-time', 0),
-(2, 1, '2025-10-11 09:00:00', '2025-10-11 11:35:00', 175, 'delayed', 5),
-(3, 2, '2025-10-10 15:00:00', '2025-10-10 17:20:00', 180, 'on-time', 0),
-(4, 3, '2025-10-10 06:00:00', '2025-10-10 11:50:00', 195, 'cancelled', 0);
+INSERT INTO `flight_instance` (`instance_id`, `flight_id`, `departure_datetime`, `arrival_datetime`, `price_usd`, `max_sellable_seat`, `status`, `delayed_min`) VALUES
+(1, 1, '2025-10-10 09:00:00', '2025-10-10 11:30:00', 120.00, 175, 'on-time', 0),
+(2, 1, '2025-10-11 09:00:00', '2025-10-11 11:35:00', 125.00, 175, 'delayed', 5),
+(3, 2, '2025-10-10 15:00:00', '2025-10-10 17:20:00', 118.00, 180, 'on-time', 0),
+(4, 3, '2025-10-10 06:00:00', '2025-10-10 11:50:00', 350.00, 195, 'cancelled', 0);
 
 -- --------------------------------------------------------
 
