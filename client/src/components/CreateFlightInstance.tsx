@@ -18,11 +18,10 @@ import { CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   useFlightSchedules,
-  useAirports,
-  useAirlines,
   useCreateFlightInstance,
   useUpdateFlightInstance,
 } from "@/hooks/useApiQuery";
+import { useAuth } from "@/context/AuthContext";
 
 function toMySQLDateTime(local: string) {
   if (!local) return local;
@@ -39,13 +38,32 @@ type InstanceHandle = {
   openWith: (data: any) => void;
 };
 
+type InstanceFormState = {
+  instance_id: number | null;
+  flight_id: string;
+  status: "on-time" | "delayed" | "cancelled";
+  departure_datetime: string;
+  arrival_datetime: string;
+  price_usd: string;
+};
+
+const createEmptyForm = (): InstanceFormState => ({
+  instance_id: null,
+  flight_id: "",
+  status: "on-time",
+  departure_datetime: "",
+  arrival_datetime: "",
+  price_usd: "",
+});
+
 const CreateFlightInstance = forwardRef<InstanceHandle | null>(
   function CreateFlightInstance(_, ref) {
     const { toast } = useToast();
     const { data: schedules = [], isLoading: loadingSchedules } =
       useFlightSchedules();
-    const { data: airports = [] } = useAirports();
-    const { data: airlines = [] } = useAirlines() as any;
+    const { account, accessType } = useAuth();
+    const isAirlineAdmin = accessType === "airline-admin";
+    const adminAirlineId = account?.airline_id ?? null;
 
     const scheduleById = useMemo(() => {
       const map: Record<string, { duration: string | null }> = {};
@@ -54,19 +72,22 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       return map;
     }, [schedules]);
 
+    const scheduleOptions = useMemo(() => {
+      if (!isAirlineAdmin || !adminAirlineId) return schedules;
+      return schedules.filter((s) => s.airline_id === adminAirlineId);
+    }, [schedules, isAirlineAdmin, adminAirlineId]);
+
     const createInstance = useCreateFlightInstance();
     const updateInstance = useUpdateFlightInstance();
 
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({
-      instance_id: null as number | null,
-      flight_id: "",
-      status: "on-time" as "on-time" | "delayed" | "cancelled",
-      flight_date: "",
-      departure_datetime: "",
-      arrival_datetime: "",
-    });
+    const [form, setForm] = useState<InstanceFormState>(() => createEmptyForm());
     const [arrivalTouched, setArrivalTouched] = useState(false);
+
+    const resetForm = () => {
+      setForm(createEmptyForm());
+      setArrivalTouched(false);
+    };
 
     useImperativeHandle(ref, () => ({
       openWith(data: any) {
@@ -75,9 +96,12 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
           instance_id: data.instance_id ?? null,
           flight_id: String(data.flight_id ?? ""),
           status: (data.status as any) ?? "on-time",
-          flight_date: "",
           departure_datetime: fromMySQLDateTime(data.departure_datetime),
           arrival_datetime: fromMySQLDateTime(data.arrival_datetime),
+          price_usd:
+            data.price_usd === undefined || data.price_usd === null
+              ? ""
+              : String(data.price_usd),
         });
         setArrivalTouched(false);
         setOpen(true);
@@ -105,11 +129,23 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       if (
         !form.flight_id ||
         !form.departure_datetime ||
-        !form.arrival_datetime
+        !form.arrival_datetime ||
+        form.price_usd === ""
       ) {
         toast({
           title: "Missing fields",
-          description: "Schedule, departure, and arrival are required.",
+          description:
+            "Schedule, departure, arrival, and price are required.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const priceValue = Number(form.price_usd);
+      if (Number.isNaN(priceValue) || priceValue < 0) {
+        toast({
+          title: "Invalid price",
+          description: "Enter a valid non-negative price.",
           variant: "destructive",
         });
         return;
@@ -123,6 +159,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
             status: form.status,
             departure_datetime: toMySQLDateTime(form.departure_datetime),
             arrival_datetime: toMySQLDateTime(form.arrival_datetime),
+            price_usd: priceValue,
           },
           {
             onSuccess: () => {
@@ -131,14 +168,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                 description: "Flight instance updated.",
               });
               setOpen(false);
-              setForm({
-                instance_id: null,
-                flight_id: "",
-                status: "on-time",
-                flight_date: "",
-                departure_datetime: "",
-                arrival_datetime: "",
-              });
+              resetForm();
             },
             onError: (e: any) =>
               toast({
@@ -155,6 +185,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
             status: form.status,
             departure_datetime: toMySQLDateTime(form.departure_datetime),
             arrival_datetime: toMySQLDateTime(form.arrival_datetime),
+            price_usd: priceValue,
           },
           {
             onSuccess: () => {
@@ -163,14 +194,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                 description: "Flight instance created.",
               });
               setOpen(false);
-              setForm({
-                instance_id: null,
-                flight_id: "",
-                status: "on-time",
-                flight_date: "",
-                departure_datetime: "",
-                arrival_datetime: "",
-              });
+              resetForm();
             },
             onError: (e: any) =>
               toast({
@@ -226,27 +250,19 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   <option value="">
                     {loadingSchedules
                       ? "Loading schedules..."
-                      : schedules.length === 0
-                      ? "No schedules available"
+                      : scheduleOptions.length === 0
+                      ? isAirlineAdmin
+                        ? "No schedules for your airline"
+                        : "No schedules available"
                       : "Select schedule..."}
                   </option>
-                  {schedules.map((s) => (
+                  {scheduleOptions.map((s) => (
                     <option key={s.flight_id} value={String(s.flight_id)}>
                       {s.flight_no} - {s.airline_name} ({s.origin_code} →{" "}
                       {s.dest_code})
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="md:col-span-2">
-                <Label>Flight Date *</Label>
-                <Input
-                  type="date"
-                  value={form.flight_date}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, flight_date: e.target.value }))
-                  }
-                />
               </div>
               {form.instance_id ? (
                 <div>
@@ -297,6 +313,18 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                       arrival_datetime: e.target.value,
                     }));
                   }}
+                />
+              </div>
+              <div>
+                <Label>Price (USD) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price_usd}
+                  onChange={(e) =>
+                    setForm((s) => ({ ...s, price_usd: e.target.value }))
+                  }
                 />
               </div>
             </div>
