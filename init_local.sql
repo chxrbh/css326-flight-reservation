@@ -235,8 +235,7 @@ CREATE TABLE `passenger` (
 --
 
 INSERT INTO `passenger` (`passenger_id`, `first_name`, `last_name`, `gender`, `dob`, `phone`, `nationality`, `account_id`) VALUES
-(1, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1),
-(2, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1);
+(1, 'John', 'Doe', 'M', '1995-04-23', '+66891234567', 'Thai', 1);
 
 -- --------------------------------------------------------
 
