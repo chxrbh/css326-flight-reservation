@@ -29,13 +29,12 @@ SET
 --
 -- Table structure for table `account`
 --
-CREATE TABLE
-  `account` (
-    `account_id` int(11) NOT NULL,
-    `email` varchar(50) NOT NULL,
-    `password` varchar(255) NOT NULL,
-    `access_type` enum('passenger', 'airline-admin', 'super-admin') NOT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `account` (
+  `account_id` int(11) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `access_type` enum('passenger', 'airline-admin', 'super-admin') NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `account`
@@ -56,15 +55,14 @@ VALUES
 --
 -- Table structure for table `airline`
 --
-CREATE TABLE
-  `airline` (
-    `airline_id` int(11) NOT NULL,
-    `airline_iata_code` varchar(3) NOT NULL,
-    `name` varchar(50) DEFAULT NULL,
-    `country` varchar(50) DEFAULT NULL,
-    `support_email` varchar(50) DEFAULT NULL,
-    `support_phone` varchar(50) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `airline` (
+  `airline_id` int(11) NOT NULL,
+  `airline_iata_code` varchar(3) NOT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `country` varchar(50) DEFAULT NULL,
+  `support_email` varchar(50) DEFAULT NULL,
+  `support_phone` varchar(50) DEFAULT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `airline`
@@ -100,15 +98,14 @@ VALUES
 --
 -- Table structure for table `airline_admin`
 --
-CREATE TABLE
-  `airline_admin` (
-    `employee_id` int(11) NOT NULL,
-    `first_name` varchar(50) DEFAULT NULL,
-    `last_name` varchar(50) DEFAULT NULL,
-    `hire_date` date DEFAULT NULL,
-    `airline_id` int(11) NOT NULL,
-    `account_id` int(11) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `airline_admin` (
+  `employee_id` int(11) NOT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
+  `hire_date` date DEFAULT NULL,
+  `airline_id` int(11) NOT NULL,
+  `account_id` int(11) DEFAULT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `airline_admin`
@@ -129,15 +126,14 @@ VALUES
 --
 -- Table structure for table `airport`
 --
-CREATE TABLE
-  `airport` (
-    `airport_id` int(11) NOT NULL,
-    `airport_iata_code` varchar(3) NOT NULL,
-    `name` varchar(50) DEFAULT NULL,
-    `city` varchar(50) DEFAULT NULL,
-    `country` varchar(50) DEFAULT NULL,
-    `timezone` varchar(10) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `airport` (
+  `airport_id` int(11) NOT NULL,
+  `airport_iata_code` varchar(3) NOT NULL,
+  `name` varchar(50) DEFAULT NULL,
+  `city` varchar(50) DEFAULT NULL,
+  `country` varchar(50) DEFAULT NULL,
+  `timezone` varchar(10) DEFAULT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `airport`
@@ -181,16 +177,15 @@ VALUES
 --
 -- Table structure for table `flight_instance`
 --
-CREATE TABLE
-  `flight_instance` (
-    `instance_id` int(11) NOT NULL,
-    `flight_id` int(11) NOT NULL,
-    `departure_datetime` datetime DEFAULT NULL,
-    `arrival_datetime` datetime DEFAULT NULL,
-    `max_sellable_seat` int(11) DEFAULT NULL,
-    `status` enum('on-time', 'delayed', 'cancelled') DEFAULT 'on-time',
-    `delayed_min` int(11) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `flight_instance` (
+  `instance_id` int(11) NOT NULL,
+  `flight_id` int(11) NOT NULL,
+  `departure_datetime` datetime DEFAULT NULL,
+  `arrival_datetime` datetime DEFAULT NULL,
+  `max_sellable_seat` int(11) DEFAULT NULL,
+  `status` enum('on-time', 'delayed', 'cancelled') DEFAULT 'on-time',
+  `delayed_min` int(11) DEFAULT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `flight_instance`
@@ -247,18 +242,17 @@ VALUES
 --
 -- Table structure for table `flight_schedule`
 --
-CREATE TABLE
-  `flight_schedule` (
-    `flight_id` int(11) NOT NULL,
-    `flight_no` varchar(10) NOT NULL,
-    `origin_airport_id` int(11) NOT NULL,
-    `destination_airport_id` int(11) NOT NULL,
-    `aircraft_type` varchar(20) DEFAULT NULL,
-    `duration` time DEFAULT NULL,
-    `max_seat` int(11) DEFAULT NULL,
-    `status` enum('active', 'cancelled') DEFAULT 'active',
-    `airline_id` int(11) NOT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `flight_schedule` (
+  `flight_id` int(11) NOT NULL,
+  `flight_no` varchar(10) NOT NULL,
+  `origin_airport_id` int(11) NOT NULL,
+  `destination_airport_id` int(11) NOT NULL,
+  `aircraft_type` varchar(20) DEFAULT NULL,
+  `duration` time DEFAULT NULL,
+  `max_seat` int(11) DEFAULT NULL,
+  `status` enum('active', 'cancelled') DEFAULT 'active',
+  `airline_id` int(11) NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `flight_schedule`
@@ -314,13 +308,12 @@ VALUES
 --
 -- Table structure for table `gate`
 --
-CREATE TABLE
-  `gate` (
-    `gate_id` int(11) NOT NULL,
-    `airport_id` int(11) NOT NULL,
-    `gate_code` varchar(12) DEFAULT NULL,
-    `status` enum('active', 'closed', 'maintenance') DEFAULT 'active'
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `gate` (
+  `gate_id` int(11) NOT NULL,
+  `airport_id` int(11) NOT NULL,
+  `gate_code` varchar(12) DEFAULT NULL,
+  `status` enum('active', 'closed', 'maintenance') DEFAULT 'active'
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `gate`
@@ -337,14 +330,13 @@ VALUES
 --
 -- Table structure for table `gate_assignment`
 --
-CREATE TABLE
-  `gate_assignment` (
-    `assignment_id` int(11) NOT NULL,
-    `gate_id` int(11) NOT NULL,
-    `instance_id` int(11) NOT NULL,
-    `occupy_start_utc` datetime NOT NULL,
-    `occupy_end_utc` datetime NOT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `gate_assignment` (
+  `assignment_id` int(11) NOT NULL,
+  `gate_id` int(11) NOT NULL,
+  `instance_id` int(11) NOT NULL,
+  `occupy_start_utc` datetime NOT NULL,
+  `occupy_end_utc` datetime NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `gate_assignment`
@@ -391,17 +383,16 @@ VALUES
 --
 -- Table structure for table `passenger`
 --
-CREATE TABLE
-  `passenger` (
-    `passenger_id` int(11) NOT NULL,
-    `first_name` varchar(50) DEFAULT NULL,
-    `last_name` varchar(50) DEFAULT NULL,
-    `gender` enum('M', 'F') DEFAULT NULL,
-    `dob` date DEFAULT NULL,
-    `phone` varchar(20) DEFAULT NULL,
-    `nationality` varchar(50) DEFAULT NULL,
-    `account_id` int(11) DEFAULT NULL
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `passenger` (
+  `passenger_id` int(11) NOT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
+  `gender` enum('M', 'F') DEFAULT NULL,
+  `dob` date DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `nationality` varchar(50) DEFAULT NULL,
+  `account_id` int(11) DEFAULT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `passenger`
@@ -443,17 +434,16 @@ VALUES
 --
 -- Table structure for table `ticket`
 --
-CREATE TABLE
-  `ticket` (
-    `ticket_id` int(11) NOT NULL,
-    `ticket_no` varchar(50) DEFAULT NULL,
-    `passenger_id` int(11) NOT NULL,
-    `instance_id` int(11) NOT NULL,
-    `seat` varchar(10) DEFAULT NULL,
-    `price_usd` decimal(8, 2) DEFAULT NULL,
-    `booking_date` date DEFAULT NULL,
-    `status` enum('booked', 'checked-In', 'cancelled') DEFAULT 'booked'
-  ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+CREATE TABLE `ticket` (
+  `ticket_id` int(11) NOT NULL,
+  `ticket_no` varchar(50) DEFAULT NULL,
+  `passenger_id` int(11) NOT NULL,
+  `instance_id` int(11) NOT NULL,
+  `seat` varchar(10) DEFAULT NULL,
+  `price_usd` decimal(8, 2) DEFAULT NULL,
+  `booking_date` date DEFAULT NULL,
+  `status` enum('booked', 'checked-In', 'cancelled') DEFAULT 'booked'
+) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
 -- Dumping data for table `ticket`
@@ -724,58 +714,67 @@ COMMIT;
 -- 3 Stored Procedures
 -- 1️⃣ Book a ticket
 DELIMITER $$
-CREATE PROCEDURE BookTicket(
-    IN p_ticket_no VARCHAR(50),
-    IN p_passenger_id INT,
-    IN p_instance_id INT,
-    IN p_seat VARCHAR(10),
-    IN p_price_usd DECIMAL(10,2)
-)
+CREATE PROCEDURE BookTicket (
+  IN p_ticket_no VARCHAR(50),
+  IN p_passenger_id INT,
+  IN p_instance_id INT,
+  IN p_seat VARCHAR(10),
+  IN p_price_usd DECIMAL(10, 2)
+) 
 BEGIN
-    INSERT INTO ticket (
-      ticket_no, 
-      passenger_id, 
-      instance_id, 
-      price_usd, 
+  INSERT INTO
+    ticket (
+      ticket_no,
+      passenger_id,
+      instance_id,
+      price_usd,
       seat,
-      status, 
-      booking_date 
+      status,
+      booking_date
     )
-    VALUES (
-      p_ticket_no,
-      p_passenger_id, 
-      p_instance_id,
-      p_price_usd,
-      p_seat ,
-      'booked', 
-      CURDATE()
-      );
-      SELECT LAST_INSERT_ID() AS ticket_id;
-END$$
+  VALUES (
+    p_ticket_no,
+    p_passenger_id,
+    p_instance_id,
+    p_price_usd,
+    p_seat,
+    'booked',
+    CURDATE()
+  );
+
+  SELECT
+    LAST_INSERT_ID() AS ticket_id;
+END $$
+
 DELIMITER ;
 
 -- 2️⃣ Cancel a ticket
 DELIMITER $$
-CREATE PROCEDURE CancelTicket (IN p_ticket_id INT) BEGIN
-UPDATE ticket
-SET
-  status = 'cancelled'
-WHERE
-  ticket_id = p_ticket_id;
+CREATE PROCEDURE CancelTicket (IN p_ticket_id INT)
+BEGIN
+  UPDATE ticket
+  SET
+    status = 'cancelled'
+  WHERE
+    ticket_id = p_ticket_id;
+END $$
 
-END $$ DELIMITER;
+DELIMITER ;
 
 -- check-in a ticket
 DELIMITER $$
-CREATE PROCEDURE CheckInTicket (IN p_ticket_id INT, IN p_seat VARCHAR(10)) BEGIN
-UPDATE ticket
-SET
-  status = 'checked-In',
-  seat = p_seat
-WHERE
-  ticket_id = p_ticket_id;
-
+CREATE PROCEDURE CheckInTicket (IN p_ticket_id INT, IN p_seat VARCHAR(10))
+BEGIN
+  UPDATE ticket
+  SET
+    status = 'checked-In',
+    seat = p_seat
+  WHERE
+    ticket_id = p_ticket_id;
 END $$
+
+DELIMITER ;
+
 -- 3️⃣ Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatusAndDelay (
@@ -783,25 +782,27 @@ CREATE PROCEDURE UpdateFlightStatusAndDelay (
   IN p_status ENUM('on-time', 'delayed', 'cancelled'), -- match your column type
   IN p_delayed_min INT,
   IN p_arrival_datetime DATETIME -- same type as arrival_datetime
-) BEGIN IF p_status = 'delayed'
-AND (
-  p_delayed_min IS NULL
-  OR p_delayed_min <= 0
-) THEN SIGNAL SQLSTATE '45000'
-SET
-  MESSAGE_TEXT = 'DELAY_MIN_MUST_BE_POSITIVE';
+)
+BEGIN
+  IF p_status = 'delayed'
+     AND (
+       p_delayed_min IS NULL
+       OR p_delayed_min <= 0
+     ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'DELAY_MIN_MUST_BE_POSITIVE';
+  END IF;
 
-END IF;
+  UPDATE flight_instance
+  SET
+    status = p_status,
+    delayed_min = p_delayed_min,
+    arrival_datetime = p_arrival_datetime
+  WHERE
+    instance_id = p_instance_id;
+END $$
 
-UPDATE flight_instance
-SET
-  status = p_status,
-  delayed_min = p_delayed_min,
-  arrival_datetime = p_arrival_datetime
-WHERE
-  instance_id = p_instance_id;
-
-END $$ DELIMITER;
+DELIMITER ;
 
 -- 3 Triggers
 -- 1️⃣ Release gate automatically after flight cancellation
@@ -810,12 +811,15 @@ CREATE TRIGGER release_gate_after_cancel
 AFTER UPDATE ON flight_instance
 FOR EACH ROW
 BEGIN
-    IF NEW.status = 'cancelled' AND OLD.status <> 'cancelled' THEN
+  IF NEW.status = 'cancelled'
+     AND OLD.status <> 'cancelled' THEN
     -- Directly delete the gate assignment when flight is cancelled
     DELETE FROM gate_assignment
-    WHERE instance_id = NEW.instance_id
-    END IF;
-END$$
+    WHERE
+      instance_id = NEW.instance_id;
+  END IF;
+END $$
+
 DELIMITER ;
 
 -- REMOVED
@@ -832,12 +836,14 @@ DELIMITER ;
 -- DELIMITER ;
 -- 3️⃣ Prevent invalid flight times
 DELIMITER $$
-CREATE TRIGGER check_flight_times BEFORE
-INSERT
-  ON flight_instance FOR EACH ROW BEGIN IF NEW.departure_datetime >= NEW.arrival_datetime THEN SIGNAL SQLSTATE '45000'
-SET
-  MESSAGE_TEXT = 'Departure must be earlier than arrival';
+CREATE TRIGGER check_flight_times
+BEFORE INSERT ON flight_instance
+FOR EACH ROW
+BEGIN
+  IF NEW.departure_datetime >= NEW.arrival_datetime THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Departure must be earlier than arrival';
+  END IF;
+END $$
 
-END IF;
-
-END $$ DELIMITER;
+DELIMITER ;
