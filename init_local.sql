@@ -724,38 +724,35 @@ COMMIT;
 -- 3 Stored Procedures
 -- 1️⃣ Book a ticket
 DELIMITER $$
-CREATE PROCEDURE BookTicket (
-  IN p_ticket_no VARCHAR(50),
-  IN p_passenger_id INT,
-  IN p_instance_id INT,
-  IN p_seat VARCHAR(10),
-  IN p_price_usd DECIMAL(10, 2)
-) BEGIN
-INSERT INTO
-  ticket (
-    ticket_no,
-    passenger_id,
-    instance_id,
-    price_usd,
-    seat,
-    status,
-    booking_date
-  )
-VALUES
-  (
-    p_ticket_no,
-    p_passenger_id,
-    p_instance_id,
-    p_seat,
-    p_price_usd,
-    'booked',
-    CURDATE()
-  );
-
-SELECT
-  LAST_INSERT_ID() AS ticket_id;
-
-END $$ DELIMITER;
+CREATE PROCEDURE BookTicket(
+    IN p_ticket_no VARCHAR(50),
+    IN p_passenger_id INT,
+    IN p_instance_id INT,
+    IN p_seat VARCHAR(10),
+    IN p_price_usd DECIMAL(10,2)
+)
+BEGIN
+    INSERT INTO ticket (
+      ticket_no, 
+      passenger_id, 
+      instance_id, 
+      price_usd, 
+      seat,
+      status, 
+      booking_date 
+    )
+    VALUES (
+      p_ticket_no,
+      p_passenger_id, 
+      p_instance_id,
+      p_price_usd,
+      p_seat ,
+      'booked', 
+      CURDATE()
+      );
+      SELECT LAST_INSERT_ID() AS ticket_id;
+END$$
+DELIMITER ;
 
 -- 2️⃣ Cancel a ticket
 DELIMITER $$
@@ -809,15 +806,17 @@ END $$ DELIMITER;
 -- 3 Triggers
 -- 1️⃣ Release gate automatically after flight cancellation
 DELIMITER $$
-CREATE TRIGGER release_gate_after_cancel AFTER
-UPDATE ON flight_instance FOR EACH ROW BEGIN IF NEW.status = 'cancelled'
-AND OLD.status <> 'cancelled' THEN
--- Directly delete the gate assignment when flight is cancelled
-DELETE FROM gate_assignment
-WHERE
-  instance_id = NEW.instance_id END IF;
-
-END $$ DELIMITER;
+CREATE TRIGGER release_gate_after_cancel
+AFTER UPDATE ON flight_instance
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'cancelled' AND OLD.status <> 'cancelled' THEN
+    -- Directly delete the gate assignment when flight is cancelled
+    DELETE FROM gate_assignment
+    WHERE instance_id = NEW.instance_id
+    END IF;
+END$$
+DELIMITER ;
 
 -- REMOVED
 -- -- 2️⃣ Auto-close gate after assignment
