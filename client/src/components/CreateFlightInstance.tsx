@@ -57,7 +57,6 @@ type InstanceFormState = {
   instance_id: number | null;
   flight_id: string;
   status: "on-time" | "delayed" | "cancelled";
-  flight_date: string;
   departure_datetime: string;
   arrival_datetime: string;
   price_usd: string;
@@ -67,8 +66,7 @@ type InstanceFormState = {
 const createEmptyForm = (): InstanceFormState => ({
   instance_id: null,
   flight_id: "",
-  status: "on-time",
-  flight_date: "",
+  status: "on-time",  
   departure_datetime: "",
   arrival_datetime: "",
   price_usd: "",
@@ -117,6 +115,11 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       if (!next) resetForm();
     };
 
+    const resetForm = () => {
+      setForm(createEmptyForm());
+      setArrivalTouched(false);
+    };
+
     useImperativeHandle(ref, () => ({
       openWith(data: any) {
         if (!data) return;
@@ -127,7 +130,6 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
           instance_id: data.instance_id ?? null,
           flight_id: String(data.flight_id ?? ""),
           status: (data.status as any) ?? "on-time",
-          flight_date: "",
           departure_datetime: fromMySQLDateTime(data.departure_datetime),
           arrival_datetime: arrivalLocal,
           price_usd:
@@ -312,17 +314,6 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="md:col-span-2">
-                <Label>Flight Date *</Label>
-                <Input
-                  type="date"
-                  value={form.flight_date}
-                  disabled={isEditing}
-                  onChange={(e) =>
-                    setForm((s) => ({ ...s, flight_date: e.target.value }))
-                  }
-                />
               </div>
               {form.instance_id ? (
                 <div>
