@@ -66,7 +66,7 @@ type InstanceFormState = {
 const createEmptyForm = (): InstanceFormState => ({
   instance_id: null,
   flight_id: "",
-  status: "on-time",  
+  status: "on-time",
   departure_datetime: "",
   arrival_datetime: "",
   price_usd: "",
@@ -113,11 +113,6 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
     const handleDialogToggle = (next: boolean) => {
       setOpen(next);
       if (!next) resetForm();
-    };
-
-    const resetForm = () => {
-      setForm(createEmptyForm());
-      setArrivalTouched(false);
     };
 
     useImperativeHandle(ref, () => ({
