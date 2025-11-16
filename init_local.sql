@@ -525,7 +525,7 @@ BEGIN
     WHERE ticket_id = p_ticket_id;
 END$$
 
--- 3️⃣ Update flight instance statu
+-- 3️⃣ Update flight instance status
 DELIMITER $$
 
 CREATE PROCEDURE UpdateFlightStatusAndDelay(
@@ -559,28 +559,26 @@ CREATE TRIGGER release_gate_after_cancel
 AFTER UPDATE ON flight_instance
 FOR EACH ROW
 BEGIN
-    IF NEW.status = 'cancelled' AND OLD.status <> 'cancelled' THEN
-        UPDATE gate g
-        JOIN gate_assignment ga ON g.gate_id = ga.gate_id
-        SET g.status = 'active'
-        WHERE ga.instance_id = NEW.instance_id
-          AND ga.occupy_start_utc <= NOW()
-          AND ga.occupy_end_utc >= NOW();
-    END IF;
+    -- Directly delete the gate assignment when flight is cancelled
+    DELETE FROM gate_assignment
+    WHERE instance_id = NEW.instance_id
+      AND occupy_start_utc <= NOW()
+      AND occupy_end_utc >= NOW();
 END$$
 DELIMITER ;
 
--- 2️⃣ Auto-close gate after assignment
-DELIMITER $$
-CREATE TRIGGER update_gate_status_after_assignment_insert
-AFTER INSERT ON gate_assignment
-FOR EACH ROW
-BEGIN
-    UPDATE gate
-    SET status = 'closed'
-    WHERE gate_id = NEW.gate_id;
-END$$
-DELIMITER ;
+-- REMOVED
+-- -- 2️⃣ Auto-close gate after assignment
+-- DELIMITER $$
+-- CREATE TRIGGER update_gate_status_after_assignment_insert
+-- AFTER INSERT ON gate_assignment
+-- FOR EACH ROW
+-- BEGIN
+--     UPDATE gate
+--     SET status = 'closed'
+--     WHERE gate_id = NEW.gate_id;
+-- END$$
+-- DELIMITER ;
 
 -- 3️⃣ Prevent invalid flight times
 DELIMITER $$
