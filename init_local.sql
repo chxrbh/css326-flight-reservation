@@ -460,11 +460,106 @@ ALTER TABLE `ticket`
   ADD CONSTRAINT `ticket_ibfk_2` FOREIGN KEY (`instance_id`) REFERENCES `flight_instance` (`instance_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
--- Step 1: Create the user
-CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
+-- =============================================
+-- FLIGHT INFORMATION VIEW
+-- View for employees to see comprehensive flight information
+-- =============================================
 
--- Step 2: Grant limited privileges
-GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON css326_project_airport_new.* TO 'webuser'@'localhost';
+CREATE VIEW view_flight_info AS
+SELECT 
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    orig.airport_iata_code AS 'Origin',
+    orig.name AS 'Origin Airport',
+    orig.city AS 'Origin City',
+    dest.airport_iata_code AS 'Destination',
+    dest.name AS 'Destination Airport',
+    dest.city AS 'Destination City',
+    fs.aircraft_type AS 'Aircraft Type',
+    fs.duration AS 'Flight Duration',
+    fs.max_seat AS 'Total Seats',
+    fs.status AS 'Schedule Status',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    fi.price_usd AS 'Price (USD)',
+    fi.max_sellable_seat AS 'Available Seats',
+    fi.status AS 'Flight Status',
+    fi.delayed_min AS 'Delay (minutes)',
+    g.gate_code AS 'Gate',
+    ga.occupy_start_utc AS 'Gate Occupy Start',
+    ga.occupy_end_utc AS 'Gate Occupy End'
+FROM flight_schedule fs
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id
+LEFT JOIN flight_instance fi ON fs.flight_id = fi.flight_id
+LEFT JOIN gate_assignment ga ON fi.instance_id = ga.instance_id
+LEFT JOIN gate g ON ga.gate_id = g.gate_id;
 
--- Step 3: Apply changes
+
+-- =============================================
+-- TICKET INFORMATION VIEW
+-- View for employees to see ticket and passenger information
+-- =============================================
+
+CREATE VIEW view_ticket_info AS
+SELECT 
+    t.ticket_no AS 'Ticket Number',
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    p.first_name AS 'Passenger First Name',
+    p.last_name AS 'Passenger Last Name',
+    p.gender AS 'Gender',
+    p.nationality AS 'Nationality',
+    p.phone AS 'Contact Phone',
+    a.email AS 'Email',
+    orig.airport_iata_code AS 'Origin',
+    dest.airport_iata_code AS 'Destination',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    t.seat AS 'Seat',
+    t.price_usd AS 'Price (USD)',
+    t.booking_date AS 'Booking Date',
+    t.status AS 'Ticket Status',
+    fi.status AS 'Flight Status'
+FROM ticket t
+INNER JOIN passenger p ON t.passenger_id = p.passenger_id
+INNER JOIN account a ON p.account_id = a.account_id
+INNER JOIN flight_instance fi ON t.instance_id = fi.instance_id
+INNER JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id;
+
+
+
+-- accounts
+
+-- webuser
+DROP USER IF EXISTS 'webuser'@'localhost';
+CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser123';
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON `css326_project_airport_new`.* TO 'webuser'@'localhost';
+FLUSH PRIVILEGES;
+
+-- developer: all privileges
+DROP USER IF EXISTS 'dev'@'localhost';
+CREATE USER 'dev'@'localhost' IDENTIFIED BY 'dev123';
+GRANT ALL PRIVILEGES ON `css326_project_airport_new`.* TO 'dev'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+-- manager: cannot edit schema
+DROP USER IF EXISTS 'manager'@'localhost';
+CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager123';
+GRANT USAGE ON *.* TO 'manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON `css326_project_airport_new`.* TO 'manager'@'localhost';
+FLUSH PRIVILEGES;
+
+-- employee: specific views
+DROP USER IF EXISTS 'employee'@'localhost';
+CREATE USER 'employee'@'localhost' IDENTIFIED BY 'employee123';
+GRANT USAGE ON `css326_project_airport_new`.* TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_flight_info` TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_ticket_info` TO 'employee'@'localhost';
 FLUSH PRIVILEGES;
