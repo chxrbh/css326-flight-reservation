@@ -30,7 +30,7 @@ SET
 -- Table structure for table `account`
 --
 CREATE TABLE `account` (
-  `account_id` int(11) NOT NULL,
+  `account_id` bigint(20) NOT NULL,
   `email` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `access_type` enum('passenger', 'airline-admin', 'super-admin') NOT NULL
@@ -98,7 +98,7 @@ CREATE TABLE `airline_admin` (
   `last_name` varchar(50) DEFAULT NULL,
   `hire_date` date DEFAULT NULL,
   `airline_id` int(11) NOT NULL,
-  `account_id` int(11) DEFAULT NULL
+  `account_id` bigint(20) DEFAULT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
@@ -172,7 +172,7 @@ VALUES
 -- Table structure for table `flight_instance`
 --
 CREATE TABLE `flight_instance` (
-  `instance_id` int(11) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `flight_id` int(11) NOT NULL,
   `departure_datetime` datetime DEFAULT NULL,
   `arrival_datetime` datetime DEFAULT NULL,
@@ -285,9 +285,9 @@ VALUES
 -- Table structure for table `gate_assignment`
 --
 CREATE TABLE `gate_assignment` (
-  `assignment_id` int(11) NOT NULL,
+  `assignment_id` bigint(20) NOT NULL,
   `gate_id` int(11) NOT NULL,
-  `instance_id` int(11) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `occupy_start_utc` datetime NOT NULL,
   `occupy_end_utc` datetime NOT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
@@ -338,14 +338,14 @@ VALUES
 -- Table structure for table `passenger`
 --
 CREATE TABLE `passenger` (
-  `passenger_id` int(11) NOT NULL,
+  `passenger_id` bigint(20) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
   `gender` enum('M', 'F') DEFAULT NULL,
   `dob` date DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `nationality` varchar(50) DEFAULT NULL,
-  `account_id` int(11) DEFAULT NULL
+  `account_id` bigint(20) DEFAULT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
@@ -360,10 +360,10 @@ INSERT INTO `passenger` (`passenger_id`, `first_name`, `last_name`, `gender`, `d
 -- Table structure for table `ticket`
 --
 CREATE TABLE `ticket` (
-  `ticket_id` int(11) NOT NULL,
+  `ticket_id` bigint(20) NOT NULL,
   `ticket_no` varchar(50) DEFAULT NULL,
-  `passenger_id` int(11) NOT NULL,
-  `instance_id` int(11) NOT NULL,
+  `passenger_id` bigint(20) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `seat` varchar(10) DEFAULT NULL,
   `price_usd` decimal(8, 2) DEFAULT NULL,
   `booking_date` date DEFAULT NULL,
@@ -512,7 +512,7 @@ ADD KEY `instance_id` (`instance_id`);
 -- AUTO_INCREMENT for table `account`
 --
 ALTER TABLE `account`
-MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `account_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 4;
 
 --
@@ -540,7 +540,7 @@ AUTO_INCREMENT = 4;
 -- AUTO_INCREMENT for table `flight_instance`
 --
 ALTER TABLE `flight_instance`
-MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `instance_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
@@ -561,21 +561,21 @@ AUTO_INCREMENT = 5;
 -- AUTO_INCREMENT for table `gate_assignment`
 --
 ALTER TABLE `gate_assignment`
-MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `assignment_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
 -- AUTO_INCREMENT for table `passenger`
 --
 ALTER TABLE `passenger`
-MODIFY `passenger_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `passenger_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 3;
 
 --
 -- AUTO_INCREMENT for table `ticket`
 --
 ALTER TABLE `ticket`
-MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `ticket_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
@@ -635,8 +635,8 @@ COMMIT;
 DELIMITER $$
 CREATE PROCEDURE BookTicket (
   IN p_ticket_no VARCHAR(50),
-  IN p_passenger_id INT,
-  IN p_instance_id INT,
+  IN p_passenger_id BIGINT,
+  IN p_instance_id BIGINT,
   IN p_seat VARCHAR(10),
   IN p_price_usd DECIMAL(10, 2)
 ) 
@@ -669,7 +669,7 @@ DELIMITER ;
 
 -- 2️⃣ Cancel a ticket
 DELIMITER $$
-CREATE PROCEDURE CancelTicket (IN p_ticket_id INT)
+CREATE PROCEDURE CancelTicket (IN p_ticket_id BIGINT)
 BEGIN
   UPDATE ticket
   SET
@@ -682,7 +682,7 @@ DELIMITER ;
 
 -- check-in a ticket
 DELIMITER $$
-CREATE PROCEDURE CheckInTicket (IN p_ticket_id INT, IN p_seat VARCHAR(10))
+CREATE PROCEDURE CheckInTicket (IN p_ticket_id BIGINT, IN p_seat VARCHAR(10))
 BEGIN
   UPDATE ticket
   SET
@@ -697,10 +697,10 @@ DELIMITER ;
 -- 3️⃣ Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatusAndDelay (
-  IN p_instance_id INT,
-  IN p_status ENUM('on-time', 'delayed', 'cancelled'), -- match your column type
+  IN p_instance_id BIGINT,
+  IN p_status ENUM('on-time', 'delayed', 'cancelled'),
   IN p_delayed_min INT,
-  IN p_arrival_datetime DATETIME -- same type as arrival_datetime
+  IN p_arrival_datetime DATETIME
 )
 BEGIN
   IF p_status = 'delayed'
