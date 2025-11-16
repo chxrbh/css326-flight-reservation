@@ -389,12 +389,12 @@ router.put("/flight-instances/:id", async (req, res) => {
       nextArrival.setMinutes(nextArrival.getMinutes() + parsedDelay);
     }
 
-    await pool.query(
-      `UPDATE flight_instance
-       SET status = ?, delayed_min = ?, arrival_datetime = ?
-       WHERE instance_id = ?`,
-      [status, newDelay, formatDateToMySQL(nextArrival), id]
-    );
+    await pool.query("CALL UpdateFlightStatusAndDelay(?, ?, ?, ?)", [
+      id,
+      status,
+      newDelay,
+      formatDateToMySQL(nextArrival),
+    ]);
 
     const [rows] = await pool.query(
       `SELECT fi.instance_id,

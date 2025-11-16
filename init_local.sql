@@ -525,14 +525,23 @@ BEGIN
     WHERE ticket_id = p_ticket_id;
 END$$
 
--- 3️⃣ Update flight instance status
+-- 3️⃣ Update flight instance statu
 DELIMITER $$
-CREATE PROCEDURE UpdateFlightStatus(IN p_instance_id INT, IN p_status ENUM('on time','delayed','cancelled'))
+
+CREATE PROCEDURE UpdateFlightStatusAndDelay(
+  IN p_instance_id INT,
+  IN p_status ENUM('on-time','delayed','cancelled'),        -- match your column type
+  IN p_delayed_min INT,
+  IN p_arrival_datetime DATETIME  -- same type as arrival_datetime
+)
 BEGIN
-    UPDATE flight_instance
-    SET status = p_status
-    WHERE instance_id = p_instance_id;
+  UPDATE flight_instance
+  SET status = p_status,
+      delayed_min = p_delayed_min,
+      arrival_datetime = p_arrival_datetime
+  WHERE instance_id = p_instance_id;
 END$$
+
 DELIMITER ;
 
 
