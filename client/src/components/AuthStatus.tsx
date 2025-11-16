@@ -7,7 +7,7 @@ export default function AuthStatus() {
 
   return (
     <div className="flex flex-col gap-1 text-sm">
-      <Label htmlFor="account-select" className="text-xs uppercase text-muted-foreground">
+      <Label htmlFor="account-select" className="text-xs uppercase text-[#D1E2E6]">
         Active Account
       </Label>
       <select
