@@ -335,6 +335,18 @@ router.post("/flight-instances", async (req, res) => {
       return res.status(400).json({ error: "flight_id must be a valid number" });
     }
 
+    const parsedDeparture = normalizeToDate(departure_datetime);
+    const parsedArrival = normalizeToDate(arrival_datetime);
+
+    if (!parsedDeparture || !parsedArrival) {
+      return res
+        .status(400)
+        .json({ error: "departure_datetime and arrival_datetime must be valid dates" });
+    }
+
+    const departureUtc = formatDateToMySQLUTC(parsedDeparture);
+    const arrivalUtc = formatDateToMySQLUTC(parsedArrival);
+
     const [scheduleRows] = await pool.query<RowDataPacket[]>(
       `SELECT origin_airport_id
        FROM flight_schedule
@@ -363,8 +375,8 @@ router.post("/flight-instances", async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           flightIdNum,
-          departure_datetime,
-          arrival_datetime,
+          departureUtc,
+          arrivalUtc,
           numericPrice,
           max_sellable_seat,
           status,
@@ -400,7 +412,7 @@ router.post("/flight-instances", async (req, res) => {
              AND occupy_start_utc < DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
              AND occupy_end_utc > DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE)
            LIMIT 1`,
-          [gateId, departure_datetime, departure_datetime]
+          [gateId, departureUtc, departureUtc]
         );
 
         if (conflicts.length === 0) {
@@ -425,7 +437,7 @@ router.post("/flight-instances", async (req, res) => {
            DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE),
            DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
          )`,
-        [assignedGateId, result.insertId, departure_datetime, departure_datetime]
+        [assignedGateId, result.insertId, departureUtc, departureUtc]
       );
 
       await connection.commit();
@@ -753,7 +765,7 @@ router.put("/flight-instances/:id", async (req, res) => {
       id,
       status,
       newDelay,
-      formatDateToMySQL(nextArrival),
+      formatDateToMySQLUTC(nextArrival),
     ]);
 
     const [rows] = await pool.query(
@@ -800,14 +812,14 @@ function normalizeToDate(value: any): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function formatDateToMySQL(date: Date): string {
+function formatDateToMySQLUTC(date: Date): string {
   const pad = (num: number) => String(num).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  const mm = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const HH = pad(date.getHours());
-  const MM = pad(date.getMinutes());
-  const SS = pad(date.getSeconds());
+  const yyyy = date.getUTCFullYear();
+  const mm = pad(date.getUTCMonth() + 1);
+  const dd = pad(date.getUTCDate());
+  const HH = pad(date.getUTCHours());
+  const MM = pad(date.getUTCMinutes());
+  const SS = pad(date.getUTCSeconds());
   return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
 }
 
