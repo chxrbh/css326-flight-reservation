@@ -630,192 +630,110 @@ ADD CONSTRAINT `ticket_ibfk_2` FOREIGN KEY (`instance_id`) REFERENCES `flight_in
 
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+-- =============================================
+-- FLIGHT INFORMATION VIEW
+-- View for employees to see comprehensive flight information
+-- =============================================
 
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+CREATE VIEW view_flight_info AS
+SELECT 
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    orig.airport_iata_code AS 'Origin',
+    orig.name AS 'Origin Airport',
+    orig.city AS 'Origin City',
+    dest.airport_iata_code AS 'Destination',
+    dest.name AS 'Destination Airport',
+    dest.city AS 'Destination City',
+    fs.aircraft_type AS 'Aircraft Type',
+    fs.duration AS 'Flight Duration',
+    fs.max_seat AS 'Total Seats',
+    fs.status AS 'Schedule Status',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    fi.price_usd AS 'Price (USD)',
+    fi.max_sellable_seat AS 'Available Seats',
+    fi.status AS 'Flight Status',
+    fi.delayed_min AS 'Delay (minutes)',
+    g.gate_code AS 'Gate',
+    ga.occupy_start_utc AS 'Gate Occupy Start',
+    ga.occupy_end_utc AS 'Gate Occupy End'
+FROM flight_schedule fs
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id
+LEFT JOIN flight_instance fi ON fs.flight_id = fi.flight_id
+LEFT JOIN gate_assignment ga ON fi.instance_id = ga.instance_id
+LEFT JOIN gate g ON ga.gate_id = g.gate_id;
 
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
--- 3 Stored Procedures
--- 1️⃣ Book a ticket
-DELIMITER $$
-CREATE PROCEDURE BookTicket (
-  IN p_ticket_no VARCHAR(50),
-  IN p_passenger_id INT,
-  IN p_instance_id INT,
-  IN p_seat VARCHAR(10),
-  IN p_price_usd DECIMAL(10, 2)
-) 
-BEGIN
-  INSERT INTO
-    ticket (
-      ticket_no,
-      passenger_id,
-      instance_id,
-      price_usd,
-      seat,
-      status,
-      booking_date
-    )
-  VALUES (
-    p_ticket_no,
-    p_passenger_id,
-    p_instance_id,
-    p_price_usd,
-    p_seat,
-    'booked',
-    CURDATE()
-  );
+-- =============================================
+-- TICKET INFORMATION VIEW
+-- View for employees to see ticket and passenger information
+-- =============================================
 
-  SELECT
-    LAST_INSERT_ID() AS ticket_id;
-END $$
+CREATE VIEW view_ticket_info AS
+SELECT 
+    t.ticket_no AS 'Ticket Number',
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    p.first_name AS 'Passenger First Name',
+    p.last_name AS 'Passenger Last Name',
+    p.gender AS 'Gender',
+    p.nationality AS 'Nationality',
+    p.phone AS 'Contact Phone',
+    a.email AS 'Email',
+    orig.airport_iata_code AS 'Origin',
+    dest.airport_iata_code AS 'Destination',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    t.seat AS 'Seat',
+    t.price_usd AS 'Price (USD)',
+    t.booking_date AS 'Booking Date',
+    t.status AS 'Ticket Status',
+    fi.status AS 'Flight Status'
+FROM ticket t
+INNER JOIN passenger p ON t.passenger_id = p.passenger_id
+INNER JOIN account a ON p.account_id = a.account_id
+INNER JOIN flight_instance fi ON t.instance_id = fi.instance_id
+INNER JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id;
 
-DELIMITER ;
 
--- 2️⃣ Cancel a ticket
-DELIMITER $$
-CREATE PROCEDURE CancelTicket (IN p_ticket_id INT)
-BEGIN
-  UPDATE ticket
-  SET
-    status = 'cancelled'
-  WHERE
-    ticket_id = p_ticket_id;
-END $$
 
-DELIMITER ;
+-- accounts
 
--- check-in a ticket
-DELIMITER $$
-CREATE PROCEDURE CheckInTicket (IN p_ticket_id INT, IN p_seat VARCHAR(10))
-BEGIN
-  UPDATE ticket
-  SET
-    status = 'checked-In',
-    seat = p_seat
-  WHERE
-    ticket_id = p_ticket_id;
-END $$
+-- webuser
+DROP USER IF EXISTS 'webuser'@'localhost';
+CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser123';
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON `css326_project_airport_new`.* TO 'webuser'@'localhost';
+FLUSH PRIVILEGES;
 
-DELIMITER ;
+-- developer: all privileges
+DROP USER IF EXISTS 'dev'@'localhost';
+CREATE USER 'dev'@'localhost' IDENTIFIED BY 'dev123';
+GRANT ALL PRIVILEGES ON `css326_project_airport_new`.* TO 'dev'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
 
--- 3️⃣ Update flight instance status
-DELIMITER $$
-CREATE PROCEDURE UpdateFlightStatusAndDelay (
-  IN p_instance_id INT,
-  IN p_status ENUM('on-time', 'delayed', 'cancelled'), -- match your column type
-  IN p_delayed_min INT,
-  IN p_arrival_datetime DATETIME -- same type as arrival_datetime
-)
-BEGIN
-  IF p_status = 'delayed'
-     AND (
-       p_delayed_min IS NULL
-       OR p_delayed_min <= 0
-     ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'DELAY_MIN_MUST_BE_POSITIVE';
-  END IF;
+-- manager: cannot edit schema
+DROP USER IF EXISTS 'manager'@'localhost';
+CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager123';
+GRANT USAGE ON *.* TO 'manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON `css326_project_airport_new`.* TO 'manager'@'localhost';
+FLUSH PRIVILEGES;
 
-  UPDATE flight_instance
-  SET
-    status = p_status,
-    delayed_min = p_delayed_min,
-    arrival_datetime = p_arrival_datetime
-  WHERE
-    instance_id = p_instance_id;
-END $$
+-- employee: specific views
+DROP USER IF EXISTS 'employee'@'localhost';
+CREATE USER 'employee'@'localhost' IDENTIFIED BY 'employee123';
+GRANT USAGE ON `css326_project_airport_new`.* TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_flight_info` TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_ticket_info` TO 'employee'@'localhost';
+FLUSH PRIVILEGES;
 
-DELIMITER ;
-
--- 3 Triggers
--- 1️⃣ Release gate automatically after flight cancellation
-DELIMITER $$
-CREATE TRIGGER release_gate_after_cancel
-AFTER UPDATE ON flight_instance
-FOR EACH ROW
-BEGIN
-  IF NEW.status = 'cancelled'
-     AND OLD.status <> 'cancelled' THEN
-    -- Directly delete the gate assignment when flight is cancelled
-    DELETE FROM gate_assignment
-    WHERE
-      instance_id = NEW.instance_id;
-  END IF;
-END $$
-
-DELIMITER ;
-
--- REMOVED
--- -- 2️⃣ Auto-close gate after assignment
--- DELIMITER $$
--- CREATE TRIGGER update_gate_status_after_assignment_insert
--- AFTER INSERT ON gate_assignment
--- FOR EACH ROW
--- BEGIN
---     UPDATE gate
---     SET status = 'closed'
---     WHERE gate_id = NEW.gate_id;
--- END$$
--- DELIMITER ;
--- 3️⃣ Prevent invalid flight times
-DELIMITER $$
-CREATE TRIGGER check_flight_times
-BEFORE INSERT ON flight_instance
-FOR EACH ROW
-BEGIN
-  IF NEW.departure_datetime >= NEW.arrival_datetime THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'Departure must be earlier than arrival';
-  END IF;
-END $$
-
-DELIMITER ;
-
--- 4️⃣ Ensure gate assignments never overlap for the same gate
-DELIMITER $$
-CREATE TRIGGER prevent_gate_assignment_conflict_insert
-BEFORE INSERT ON gate_assignment
-FOR EACH ROW
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM gate_assignment ga
-    WHERE ga.gate_id = NEW.gate_id
-      AND ga.occupy_start_utc < NEW.occupy_end_utc
-      AND ga.occupy_end_utc > NEW.occupy_start_utc
-  ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
-  END IF;
-END $$
-DELIMITER ;
-
-DELIMITER $$
-CREATE TRIGGER prevent_gate_assignment_conflict_update
-BEFORE UPDATE ON gate_assignment
-FOR EACH ROW
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM gate_assignment ga
-    WHERE ga.gate_id = NEW.gate_id
-      AND ga.assignment_id <> NEW.assignment_id
-      AND ga.occupy_start_utc < NEW.occupy_end_utc
-      AND ga.occupy_end_utc > NEW.occupy_start_utc
-  ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
-  END IF;
-END $$
-DELIMITER ;
--- Step 1: Create the user
-CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
-
--- Step 2: Grant limited privileges
-GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON css326_project_airport_new.* TO 'webuser'@'localhost';
-
--- Step 3: Apply changes
-
+-- Remove all privileges from root user
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'root'@'localhost';
 FLUSH PRIVILEGES;
