@@ -20,6 +20,8 @@ import {
   useFlightSchedules,
   useCreateFlightInstance,
   useUpdateFlightInstance,
+  useGateOptions,
+  useUpdateGateAssignment,
 } from "@/hooks/useApiQuery";
 import { useAuth } from "@/context/AuthContext";
 
@@ -61,16 +63,20 @@ type InstanceFormState = {
   arrival_datetime: string;
   price_usd: string;
   delayed_min: string;
+  origin_airport_id: number | null;
+  gate_id: number | null;
 };
 
 const createEmptyForm = (): InstanceFormState => ({
   instance_id: null,
   flight_id: "",
-  status: "on-time",  
+  status: "on-time",
   departure_datetime: "",
   arrival_datetime: "",
   price_usd: "",
   delayed_min: "0",
+  origin_airport_id: null,
+  gate_id: null,
 });
 
 const CreateFlightInstance = forwardRef<InstanceHandle | null>(
@@ -96,11 +102,15 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
 
     const createInstance = useCreateFlightInstance();
     const updateInstance = useUpdateFlightInstance();
+    const updateGateAssignment = useUpdateGateAssignment();
 
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState<InstanceFormState>(() => createEmptyForm());
     const [arrivalTouched, setArrivalTouched] = useState(false);
     const [scheduledArrivalLocal, setScheduledArrivalLocal] = useState("");
+    const [selectedGateId, setSelectedGateId] = useState<number | null>(null);
+    const [initialGateId, setInitialGateId] = useState<number | null>(null);
+    const gateOptions = useGateOptions(form.instance_id ?? null);
 
     const isEditing = Boolean(form.instance_id);
 
@@ -108,16 +118,13 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       setForm(createEmptyForm());
       setArrivalTouched(false);
       setScheduledArrivalLocal("");
+      setSelectedGateId(null);
+      setInitialGateId(null);
     };
 
     const handleDialogToggle = (next: boolean) => {
       setOpen(next);
       if (!next) resetForm();
-    };
-
-    const resetForm = () => {
-      setForm(createEmptyForm());
-      setArrivalTouched(false);
     };
 
     useImperativeHandle(ref, () => ({
@@ -137,8 +144,12 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
               ? ""
               : String(data.price_usd),
           delayed_min: String(currentDelay || 0),
+          origin_airport_id: data.origin_airport_id ?? null,
+          gate_id: data.gate_id ?? null,
         });
         setScheduledArrivalLocal(scheduled);
+        setSelectedGateId(data.gate_id ?? null);
+        setInitialGateId(data.gate_id ?? null);
         setArrivalTouched(false);
         handleDialogToggle(true);
       },
@@ -161,7 +172,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
     }
 
-    const handleSave = () => {
+    const handleSave = async () => {
       if (isEditing) {
         const rawDelay =
           form.status === "delayed" ? Number(form.delayed_min || 0) : undefined;
@@ -182,28 +193,39 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
             ? rawDelay
             : undefined;
 
-        updateInstance.mutate(
-          {
+        try {
+          await updateInstance.mutateAsync({
             instance_id: form.instance_id as number,
             status: form.status,
             delayed_min: delayMinutes,
-          },
-          {
-            onSuccess: () => {
-              toast({
-                title: "Updated",
-                description: "Flight instance updated.",
-              });
-              handleDialogToggle(false);
-            },
-            onError: (e: any) =>
-              toast({
-                title: "Update failed",
-                description: e?.message || "Server error",
-                variant: "destructive",
-              }),
+          });
+
+          const currentGateId =
+            gateOptions.data?.current_gate_id ?? initialGateId ?? null;
+          const desiredGateId =
+            typeof selectedGateId === "number" ? selectedGateId : null;
+          if (
+            typeof desiredGateId === "number" &&
+            desiredGateId !== currentGateId
+          ) {
+            await updateGateAssignment.mutateAsync({
+              instance_id: form.instance_id as number,
+              gate_id: desiredGateId,
+            });
           }
-        );
+
+          toast({
+            title: "Updated",
+            description: "Flight instance updated.",
+          });
+          handleDialogToggle(false);
+        } catch (e: any) {
+          toast({
+            title: "Update failed",
+            description: e?.message || "Server error",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -381,6 +403,68 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   />
                 </div>
               ) : null}
+              {isEditing ? (
+                <div className="md:col-span-2">
+                  <Label>Gate Assignment</Label>
+                  {gateOptions.isLoading ? (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      Loading gate options...
+                    </div>
+                  ) : gateOptions.isError ? (
+                    <div className="mt-2 text-sm text-destructive">
+                      Failed to load gate options.
+                    </div>
+                  ) : (gateOptions.data?.gates?.length ?? 0) === 0 ? (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      No gates available for the origin airport.
+                    </div>
+                  ) : (
+                    <select
+                      className="w-full mt-1 h-10 rounded-md border px-3"
+                      value={selectedGateId ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedGateId(val ? Number(val) : null);
+                      }}
+                    >
+                      <option value="">
+                        {gateOptions.data?.current_gate_id
+                          ? "Keep current gate"
+                          : "Select a gate"}
+                      </option>
+                      {gateOptions.data?.gates.map((gate) => {
+                        const gateLabel = gate.gate_code
+                          ? `Gate ${gate.gate_code}`
+                          : `Gate #${gate.gate_id}`;
+                        const unavailable =
+                          !gate.is_available &&
+                          gate.gate_id !== gateOptions.data?.current_gate_id;
+                        const inactive = gate.status !== "active";
+                        return (
+                          <option
+                            key={gate.gate_id}
+                            value={gate.gate_id}
+                            disabled={unavailable || inactive}
+                          >
+                            {`${gateLabel} — ${gate.status}${
+                              unavailable ? " (occupied)" : ""
+                            }`}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+                  {gateOptions.data?.current_gate_id ? (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Current gate:{" "}
+                      {gateOptions.data?.gates.find(
+                        (gate) =>
+                          gate.gate_id === gateOptions.data?.current_gate_id
+                      )?.gate_code || "Unknown"}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div>
                 <Label>Departure Date & Time *</Label>
                 <Input
@@ -435,15 +519,15 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
 
             <div className="flex gap-2">
               <Button
-                onClick={handleSave}
+                onClick={() => void handleSave()}
                 disabled={
                   form.instance_id
-                    ? updateInstance.isPending
+                    ? updateInstance.isPending || updateGateAssignment.isPending
                     : createInstance.isPending
                 }
               >
                 {form.instance_id
-                  ? updateInstance.isPending
+                  ? updateInstance.isPending || updateGateAssignment.isPending
                     ? "Updating..."
                     : "Update Instance"
                   : createInstance.isPending

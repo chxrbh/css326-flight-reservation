@@ -1,8 +1,34 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { RowDataPacket } from "mysql2";
+import { RowDataPacket, ResultSetHeader } from "mysql2";
+import type { PoolConnection } from "mysql2/promise";
 
 const router = Router();
+const GATE_BUFFER_BEFORE_MINUTES = 90;
+const GATE_BUFFER_AFTER_MINUTES = 15;
+
+type HttpError = Error & { statusCode?: number };
+
+function createHttpError(statusCode: number, message: string): HttpError {
+  const err = new Error(message) as HttpError;
+  err.statusCode = statusCode;
+  return err;
+}
+
+async function getInstanceContext(instanceId: number) {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT fi.instance_id,
+            fi.flight_id,
+            fi.departure_datetime,
+            fs.origin_airport_id
+     FROM flight_instance fi
+     JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+     WHERE fi.instance_id = ?
+     LIMIT 1`,
+    [instanceId]
+  );
+  return rows[0];
+}
 
 // List flight schedules (for instance creation and display context)
 router.get("/flight-schedules/:id", async (req, res) => {
@@ -249,13 +275,20 @@ router.get("/flight-instances", async (_req, res) => {
               al.airline_id,
               al.name              AS airline_name,
               al.airline_iata_code AS airline_code,
+              ao.airport_id        AS origin_airport_id,
               ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
+              ad.airport_iata_code AS dest_code,
+              ga.gate_id,
+              ga.occupy_start_utc  AS gate_assignment_start,
+              ga.occupy_end_utc    AS gate_assignment_end,
+              g.gate_code
        FROM flight_instance fi
        JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
        JOIN airline al         ON fs.airline_id = al.airline_id
        JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
+       LEFT JOIN gate_assignment ga ON ga.instance_id = fi.instance_id
+       LEFT JOIN gate g             ON ga.gate_id = g.gate_id
        ORDER BY fi.departure_datetime DESC`
     );
     res.json(rows);
@@ -297,49 +330,358 @@ router.post("/flight-instances", async (req, res) => {
         .json({ error: "price_usd must be a valid non-negative number" });
     }
 
-    const [result]: any = await pool.query(
-      `INSERT INTO flight_instance
-       (flight_id, departure_datetime, arrival_datetime, price_usd, max_sellable_seat, status, delayed_min)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        Number(flight_id),
-        departure_datetime,
-        arrival_datetime,
-        numericPrice,
-        max_sellable_seat,
-        status,
-        delayed_min ?? 0,
-      ]
-    );
+    const flightIdNum = Number(flight_id);
+    if (!flightIdNum || Number.isNaN(flightIdNum)) {
+      return res.status(400).json({ error: "flight_id must be a valid number" });
+    }
 
-    const [rows] = await pool.query(
-      `SELECT fi.instance_id,
-              fi.flight_id,
-              fi.departure_datetime,
-              fi.arrival_datetime,
-              fi.price_usd,
-              fi.max_sellable_seat,
-              fi.status,
-              fi.delayed_min,
-              fs.flight_no,
-              al.name              AS airline_name,
-              al.airline_iata_code AS airline_code,
-              ao.airport_iata_code AS origin_code,
-              ad.airport_iata_code AS dest_code
-       FROM flight_instance fi
-       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
-       JOIN airline al         ON fs.airline_id = al.airline_id
-       JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
-       JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
-       WHERE fi.instance_id = ?
+    const [scheduleRows] = await pool.query<RowDataPacket[]>(
+      `SELECT origin_airport_id
+       FROM flight_schedule
+       WHERE flight_id = ?
        LIMIT 1`,
-      [result.insertId]
+      [flightIdNum]
     );
 
-    res.status(201).json((rows as any[])[0]);
+    if (scheduleRows.length === 0) {
+      return res.status(404).json({ error: "Flight schedule not found" });
+    }
+
+    const originAirportId = Number(scheduleRows[0].origin_airport_id);
+
+    let connection: PoolConnection | null = null;
+    let transactionStarted = false;
+
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      transactionStarted = true;
+
+      const [result] = await connection.query<ResultSetHeader>(
+        `INSERT INTO flight_instance
+         (flight_id, departure_datetime, arrival_datetime, price_usd, max_sellable_seat, status, delayed_min)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          flightIdNum,
+          departure_datetime,
+          arrival_datetime,
+          numericPrice,
+          max_sellable_seat,
+          status,
+          delayed_min ?? 0,
+        ]
+      );
+
+      const [gateRows] = await connection.query<RowDataPacket[]>(
+        `SELECT gate_id
+         FROM gate
+         WHERE airport_id = ?
+           AND status = 'active'
+         ORDER BY gate_id
+         FOR UPDATE`,
+        [originAirportId]
+      );
+
+      if (gateRows.length === 0) {
+        throw createHttpError(
+          409,
+          "No active gates available at the origin airport"
+        );
+      }
+
+      let assignedGateId: number | null = null;
+
+      for (const gate of gateRows) {
+        const gateId = Number(gate.gate_id);
+        const [conflicts] = await connection.query<RowDataPacket[]>(
+          `SELECT 1
+           FROM gate_assignment
+           WHERE gate_id = ?
+             AND occupy_start_utc < DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+             AND occupy_end_utc > DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE)
+           LIMIT 1`,
+          [gateId, departure_datetime, departure_datetime]
+        );
+
+        if (conflicts.length === 0) {
+          assignedGateId = gateId;
+          break;
+        }
+      }
+
+      if (!assignedGateId) {
+        throw createHttpError(
+          409,
+          "Gate assignment conflict: no gate is free during the requested window"
+        );
+      }
+
+      await connection.query(
+        `INSERT INTO gate_assignment
+         (gate_id, instance_id, occupy_start_utc, occupy_end_utc)
+         VALUES (
+           ?,
+           ?,
+           DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE),
+           DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+         )`,
+        [assignedGateId, result.insertId, departure_datetime, departure_datetime]
+      );
+
+      await connection.commit();
+
+      const [rows] = await connection.query<RowDataPacket[]>(
+        `SELECT fi.instance_id,
+                fi.flight_id,
+                fi.departure_datetime,
+                fi.arrival_datetime,
+                fi.price_usd,
+                fi.max_sellable_seat,
+                fi.status,
+                fi.delayed_min,
+                fs.flight_no,
+                al.name              AS airline_name,
+                al.airline_iata_code AS airline_code,
+                ao.airport_iata_code AS origin_code,
+                ad.airport_iata_code AS dest_code
+         FROM flight_instance fi
+         JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+         JOIN airline al         ON fs.airline_id = al.airline_id
+         JOIN airport ao         ON fs.origin_airport_id = ao.airport_id
+         JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
+         WHERE fi.instance_id = ?
+         LIMIT 1`,
+        [result.insertId]
+      );
+
+      if (rows.length === 0) {
+        throw createHttpError(500, "Failed to load created flight instance");
+      }
+
+      res.status(201).json(rows[0]);
+    } catch (assignmentError: any) {
+      if (transactionStarted && connection) {
+        try {
+          await connection.rollback();
+        } catch (rollbackError) {
+          console.error("Rollback error:", rollbackError);
+        }
+      }
+
+      const statusCode =
+        typeof assignmentError?.statusCode === "number"
+          ? assignmentError.statusCode
+          : 500;
+      const message =
+        assignmentError instanceof Error
+          ? assignmentError.message
+          : "Failed to create flight instance";
+
+      if (statusCode >= 500) {
+        console.error("POST /flight-instances error:", assignmentError);
+      }
+
+      return res.status(statusCode).json({ error: message });
+    } finally {
+      connection?.release();
+    }
   } catch (err: any) {
     console.error("POST /flight-instances error:", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/flight-instances/:id/gates", async (req, res) => {
+  const instanceId = Number(req.params.id);
+  if (Number.isNaN(instanceId)) {
+    return res.status(400).json({ error: "Invalid instance ID" });
+  }
+
+  try {
+    const context = await getInstanceContext(instanceId);
+    if (!context) {
+      return res.status(404).json({ error: "Flight instance not found" });
+    }
+
+    const originAirportId = Number(context.origin_airport_id);
+    const departureDateTime = context.departure_datetime;
+
+    const [assignmentRows] = await pool.query<RowDataPacket[]>(
+      `SELECT assignment_id,
+              gate_id,
+              occupy_start_utc,
+              occupy_end_utc
+       FROM gate_assignment
+       WHERE instance_id = ?
+       LIMIT 1`,
+      [instanceId]
+    );
+    const assignment = assignmentRows[0] ?? null;
+
+    const [gateRows] = await pool.query<RowDataPacket[]>(
+      `SELECT g.gate_id,
+              g.gate_code,
+              g.status,
+              NOT EXISTS (
+                SELECT 1
+                FROM gate_assignment ga2
+                WHERE ga2.gate_id = g.gate_id
+                  AND ga2.instance_id <> ?
+                  AND ga2.occupy_start_utc < DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+                  AND ga2.occupy_end_utc > DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE)
+              ) AS is_available
+       FROM gate g
+       WHERE g.airport_id = ?
+         AND g.status = 'active'
+       ORDER BY g.gate_code ASC`,
+      [instanceId, departureDateTime, departureDateTime, originAirportId]
+    );
+
+    res.json({
+      instance_id: instanceId,
+      origin_airport_id: originAirportId,
+      current_gate_id: assignment?.gate_id ?? null,
+      occupy_start_utc: assignment?.occupy_start_utc ?? null,
+      occupy_end_utc: assignment?.occupy_end_utc ?? null,
+      gates: gateRows.map((gate) => ({
+        gate_id: Number(gate.gate_id),
+        gate_code: gate.gate_code,
+        status: gate.status,
+        is_available: Boolean(gate.is_available),
+      })),
+    });
+  } catch (err: any) {
+    console.error("GET /flight-instances/:id/gates error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/flight-instances/:id/gate", async (req, res) => {
+  const instanceId = Number(req.params.id);
+  if (Number.isNaN(instanceId)) {
+    return res.status(400).json({ error: "Invalid instance ID" });
+  }
+
+  const gateIdRaw = req.body?.gate_id;
+  const gateId = Number(gateIdRaw);
+  if (!gateId || Number.isNaN(gateId)) {
+    return res.status(400).json({ error: "gate_id is required" });
+  }
+
+  try {
+    const context = await getInstanceContext(instanceId);
+    if (!context) {
+      return res.status(404).json({ error: "Flight instance not found" });
+    }
+
+    const originAirportId = Number(context.origin_airport_id);
+    const departureDateTime = context.departure_datetime;
+
+    let connection: PoolConnection | null = null;
+    let transactionStarted = false;
+
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      transactionStarted = true;
+
+      const [gateRows] = await connection.query<RowDataPacket[]>(
+        `SELECT gate_id, status
+         FROM gate
+         WHERE gate_id = ?
+           AND airport_id = ?
+         FOR UPDATE`,
+        [gateId, originAirportId]
+      );
+
+      if (gateRows.length === 0) {
+        throw createHttpError(
+          404,
+          "Gate not found for the flight's origin airport"
+        );
+      }
+
+      if (gateRows[0].status !== "active") {
+        throw createHttpError(409, "Gate is not active");
+      }
+
+      const [conflicts] = await connection.query<RowDataPacket[]>(
+        `SELECT 1
+         FROM gate_assignment
+         WHERE gate_id = ?
+           AND instance_id <> ?
+           AND occupy_start_utc < DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+           AND occupy_end_utc > DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE)
+         LIMIT 1
+         FOR UPDATE`,
+        [gateId, instanceId, departureDateTime, departureDateTime]
+      );
+
+      if (conflicts.length > 0) {
+        throw createHttpError(
+          409,
+          "Gate assignment conflict: chosen gate is not available"
+        );
+      }
+
+      await connection.query(
+        `INSERT INTO gate_assignment
+         (gate_id, instance_id, occupy_start_utc, occupy_end_utc)
+         VALUES (
+           ?,
+           ?,
+           DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE),
+           DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+         )
+         ON DUPLICATE KEY UPDATE
+           gate_id = VALUES(gate_id),
+           occupy_start_utc = VALUES(occupy_start_utc),
+           occupy_end_utc = VALUES(occupy_end_utc)`,
+        [gateId, instanceId, departureDateTime, departureDateTime]
+      );
+
+      await connection.commit();
+
+      const [updatedRows] = await pool.query<RowDataPacket[]>(
+        `SELECT ga.assignment_id,
+                ga.gate_id,
+                ga.occupy_start_utc,
+                ga.occupy_end_utc,
+                g.gate_code
+         FROM gate_assignment ga
+         JOIN gate g ON ga.gate_id = g.gate_id
+         WHERE ga.instance_id = ?
+         LIMIT 1`,
+        [instanceId]
+      );
+
+      res.json(updatedRows[0]);
+    } catch (err: any) {
+      if (transactionStarted && connection) {
+        try {
+          await connection.rollback();
+        } catch (rollbackError) {
+          console.error("Rollback error:", rollbackError);
+        }
+      }
+
+      const statusCode =
+        typeof err?.statusCode === "number" ? err.statusCode : 500;
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to update gate assignment";
+
+      if (statusCode >= 500) {
+        console.error("PUT /flight-instances/:id/gate error:", err);
+      }
+      return res.status(statusCode).json({ error: message });
+    } finally {
+      connection?.release();
+    }
+  } catch (outerErr: any) {
+    console.error("PUT /flight-instances/:id/gate error:", outerErr);
+    res.status(500).json({ error: outerErr.message });
   }
 });
 

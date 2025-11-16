@@ -7,7 +7,7 @@ import flightsRouter from "./routes/flights";
 import airportsRouter from "./routes/airports";
 import reservationsRouter from "./routes/reservations";
 import authRouter from "./routes/auth";
-import testRouter from "./routes/test";
+import testRouter from "./routes/test_alter-view";
 import airlineAdminsRouter from "./routes/airlineAdmins";
 
 

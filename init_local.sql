@@ -30,7 +30,7 @@ SET
 -- Table structure for table `account`
 --
 CREATE TABLE `account` (
-  `account_id` int(11) NOT NULL,
+  `account_id` bigint(20) NOT NULL,
   `email` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `access_type` enum('passenger', 'airline-admin', 'super-admin') NOT NULL
@@ -98,7 +98,7 @@ CREATE TABLE `airline_admin` (
   `last_name` varchar(50) DEFAULT NULL,
   `hire_date` date DEFAULT NULL,
   `airline_id` int(11) NOT NULL,
-  `account_id` int(11) DEFAULT NULL
+  `account_id` bigint(20) DEFAULT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
@@ -172,7 +172,7 @@ VALUES
 -- Table structure for table `flight_instance`
 --
 CREATE TABLE `flight_instance` (
-  `instance_id` int(11) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `flight_id` int(11) NOT NULL,
   `departure_datetime` datetime DEFAULT NULL,
   `arrival_datetime` datetime DEFAULT NULL,
@@ -285,9 +285,9 @@ VALUES
 -- Table structure for table `gate_assignment`
 --
 CREATE TABLE `gate_assignment` (
-  `assignment_id` int(11) NOT NULL,
+  `assignment_id` bigint(20) NOT NULL,
   `gate_id` int(11) NOT NULL,
-  `instance_id` int(11) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `occupy_start_utc` datetime NOT NULL,
   `occupy_end_utc` datetime NOT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
@@ -338,14 +338,14 @@ VALUES
 -- Table structure for table `passenger`
 --
 CREATE TABLE `passenger` (
-  `passenger_id` int(11) NOT NULL,
+  `passenger_id` bigint(20) NOT NULL,
   `first_name` varchar(50) DEFAULT NULL,
   `last_name` varchar(50) DEFAULT NULL,
   `gender` enum('M', 'F') DEFAULT NULL,
   `dob` date DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `nationality` varchar(50) DEFAULT NULL,
-  `account_id` int(11) DEFAULT NULL
+  `account_id` bigint(20) DEFAULT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 --
@@ -360,10 +360,10 @@ INSERT INTO `passenger` (`passenger_id`, `first_name`, `last_name`, `gender`, `d
 -- Table structure for table `ticket`
 --
 CREATE TABLE `ticket` (
-  `ticket_id` int(11) NOT NULL,
+  `ticket_id` bigint(20) NOT NULL,
   `ticket_no` varchar(50) DEFAULT NULL,
-  `passenger_id` int(11) NOT NULL,
-  `instance_id` int(11) NOT NULL,
+  `passenger_id` bigint(20) NOT NULL,
+  `instance_id` bigint(20) NOT NULL,
   `seat` varchar(10) DEFAULT NULL,
   `price_usd` decimal(8, 2) DEFAULT NULL,
   `booking_date` date DEFAULT NULL,
@@ -512,7 +512,7 @@ ADD KEY `instance_id` (`instance_id`);
 -- AUTO_INCREMENT for table `account`
 --
 ALTER TABLE `account`
-MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `account_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 4;
 
 --
@@ -540,7 +540,7 @@ AUTO_INCREMENT = 4;
 -- AUTO_INCREMENT for table `flight_instance`
 --
 ALTER TABLE `flight_instance`
-MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `instance_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
@@ -561,21 +561,21 @@ AUTO_INCREMENT = 5;
 -- AUTO_INCREMENT for table `gate_assignment`
 --
 ALTER TABLE `gate_assignment`
-MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `assignment_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
 -- AUTO_INCREMENT for table `passenger`
 --
 ALTER TABLE `passenger`
-MODIFY `passenger_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `passenger_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 3;
 
 --
 -- AUTO_INCREMENT for table `ticket`
 --
 ALTER TABLE `ticket`
-MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT,
+MODIFY `ticket_id` bigint(20) NOT NULL AUTO_INCREMENT,
 AUTO_INCREMENT = 5;
 
 --
@@ -630,19 +630,13 @@ ADD CONSTRAINT `ticket_ibfk_2` FOREIGN KEY (`instance_id`) REFERENCES `flight_in
 
 COMMIT;
 
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
--- 4 Stored Procedures
--- Book a ticket
+-- 3 Stored Procedures
+-- 1️⃣ Book a ticket
 DELIMITER $$
 CREATE PROCEDURE BookTicket (
   IN p_ticket_no VARCHAR(50),
-  IN p_passenger_id INT,
-  IN p_instance_id INT,
+  IN p_passenger_id BIGINT,
+  IN p_instance_id BIGINT,
   IN p_seat VARCHAR(10),
   IN p_price_usd DECIMAL(10, 2)
 ) 
@@ -675,7 +669,7 @@ DELIMITER ;
 
 -- Cancel a ticket
 DELIMITER $$
-CREATE PROCEDURE CancelTicket (IN p_ticket_id INT)
+CREATE PROCEDURE CancelTicket (IN p_ticket_id BIGINT)
 BEGIN
   UPDATE ticket
   SET
@@ -688,7 +682,7 @@ DELIMITER ;
 
 -- check-in a ticket
 DELIMITER $$
-CREATE PROCEDURE CheckInTicket (IN p_ticket_id INT, IN p_seat VARCHAR(10))
+CREATE PROCEDURE CheckInTicket (IN p_ticket_id BIGINT, IN p_seat VARCHAR(10))
 BEGIN
   UPDATE ticket
   SET
@@ -703,10 +697,10 @@ DELIMITER ;
 -- Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatusAndDelay (
-  IN p_instance_id INT,
-  IN p_status ENUM('on-time', 'delayed', 'cancelled'), -- match your column type
+  IN p_instance_id BIGINT,
+  IN p_status ENUM('on-time', 'delayed', 'cancelled'),
   IN p_delayed_min INT,
-  IN p_arrival_datetime DATETIME -- same type as arrival_datetime
+  IN p_arrival_datetime DATETIME
 )
 BEGIN
   IF p_status = 'delayed'
@@ -747,20 +741,7 @@ END $$
 
 DELIMITER ;
 
--- REMOVED
--- -- Auto-close gate after assignment
--- DELIMITER $$
--- CREATE TRIGGER update_gate_status_after_assignment_insert
--- AFTER INSERT ON gate_assignment
--- FOR EACH ROW
--- BEGIN
---     UPDATE gate
---     SET status = 'closed'
---     WHERE gate_id = NEW.gate_id;
--- END$$
--- DELIMITER ;
-
--- Prevent invalid flight times
+-- 2️⃣ Ensure departure is before arrival
 DELIMITER $$
 CREATE TRIGGER check_flight_times
 BEFORE INSERT ON flight_instance
@@ -771,17 +752,150 @@ BEGIN
       SET MESSAGE_TEXT = 'Departure must be earlier than arrival';
   END IF;
 END $$
+DELIMITER ;
 
+-- 4️⃣ Ensure gate assignments never overlap for the same gate
+DELIMITER $$
+CREATE TRIGGER prevent_gate_assignment_conflict_insert
+BEFORE INSERT ON gate_assignment
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM gate_assignment ga
+    WHERE ga.gate_id = NEW.gate_id
+      AND ga.occupy_start_utc < NEW.occupy_end_utc
+      AND ga.occupy_end_utc > NEW.occupy_start_utc
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
+  END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER prevent_gate_assignment_conflict_update
+BEFORE UPDATE ON gate_assignment
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM gate_assignment ga
+    WHERE ga.gate_id = NEW.gate_id
+      AND ga.assignment_id <> NEW.assignment_id
+      AND ga.occupy_start_utc < NEW.occupy_end_utc
+      AND ga.occupy_end_utc > NEW.occupy_start_utc
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
+  END IF;
+END $$
 DELIMITER ;
 
 
+-- =============================================
+-- FLIGHT INFORMATION VIEW
+-- View for employees to see comprehensive flight information
+-- =============================================
 
--- Step 1: Create the user
-CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
+CREATE VIEW view_flight_info AS
+SELECT 
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    orig.airport_iata_code AS 'Origin',
+    orig.name AS 'Origin Airport',
+    orig.city AS 'Origin City',
+    dest.airport_iata_code AS 'Destination',
+    dest.name AS 'Destination Airport',
+    dest.city AS 'Destination City',
+    fs.aircraft_type AS 'Aircraft Type',
+    fs.duration AS 'Flight Duration',
+    fs.max_seat AS 'Total Seats',
+    fs.status AS 'Schedule Status',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    fi.price_usd AS 'Price (USD)',
+    fi.max_sellable_seat AS 'Available Seats',
+    fi.status AS 'Flight Status',
+    fi.delayed_min AS 'Delay (minutes)',
+    g.gate_code AS 'Gate',
+    ga.occupy_start_utc AS 'Gate Occupy Start',
+    ga.occupy_end_utc AS 'Gate Occupy End'
+FROM flight_schedule fs
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id
+LEFT JOIN flight_instance fi ON fs.flight_id = fi.flight_id
+LEFT JOIN gate_assignment ga ON fi.instance_id = ga.instance_id
+LEFT JOIN gate g ON ga.gate_id = g.gate_id;
 
--- Step 2: Grant limited privileges
-GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON css326_project_airport_new.* TO 'webuser'@'localhost';
 
--- Step 3: Apply changes
+-- =============================================
+-- TICKET INFORMATION VIEW
+-- View for employees to see ticket and passenger information
+-- =============================================
 
+CREATE VIEW view_ticket_info AS
+SELECT 
+    t.ticket_no AS 'Ticket Number',
+    fs.flight_no AS 'Flight Number',
+    al.airline_iata_code AS 'Airline Code',
+    al.name AS 'Airline Name',
+    p.first_name AS 'Passenger First Name',
+    p.last_name AS 'Passenger Last Name',
+    p.gender AS 'Gender',
+    p.nationality AS 'Nationality',
+    p.phone AS 'Contact Phone',
+    a.email AS 'Email',
+    orig.airport_iata_code AS 'Origin',
+    dest.airport_iata_code AS 'Destination',
+    fi.departure_datetime AS 'Departure Time',
+    fi.arrival_datetime AS 'Arrival Time',
+    t.seat AS 'Seat',
+    t.price_usd AS 'Price (USD)',
+    t.booking_date AS 'Booking Date',
+    t.status AS 'Ticket Status',
+    fi.status AS 'Flight Status'
+FROM ticket t
+INNER JOIN passenger p ON t.passenger_id = p.passenger_id
+INNER JOIN account a ON p.account_id = a.account_id
+INNER JOIN flight_instance fi ON t.instance_id = fi.instance_id
+INNER JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+INNER JOIN airline al ON fs.airline_id = al.airline_id
+INNER JOIN airport orig ON fs.origin_airport_id = orig.airport_id
+INNER JOIN airport dest ON fs.destination_airport_id = dest.airport_id;
+
+
+-- accounts
+
+-- webuser
+DROP USER IF EXISTS 'webuser'@'localhost';
+CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser123';
+GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON `css326_project_airport_new`.* TO 'webuser'@'localhost';
+FLUSH PRIVILEGES;
+
+-- developer: all privileges
+DROP USER IF EXISTS 'dev'@'localhost';
+CREATE USER 'dev'@'localhost' IDENTIFIED BY 'dev123';
+GRANT ALL PRIVILEGES ON `css326_project_airport_new`.* TO 'dev'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+-- manager: cannot edit schema
+DROP USER IF EXISTS 'manager'@'localhost';
+CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager123';
+GRANT USAGE ON *.* TO 'manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON `css326_project_airport_new`.* TO 'manager'@'localhost';
+FLUSH PRIVILEGES;
+
+-- employee: specific views
+DROP USER IF EXISTS 'employee'@'localhost';
+CREATE USER 'employee'@'localhost' IDENTIFIED BY 'employee123';
+GRANT USAGE ON `css326_project_airport_new`.* TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_flight_info` TO 'employee'@'localhost';
+GRANT SELECT ON `css326_project_airport_new`.`view_ticket_info` TO 'employee'@'localhost';
+FLUSH PRIVILEGES;
+
+-- Remove all privileges from root user
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'root'@'localhost';
 FLUSH PRIVILEGES;
