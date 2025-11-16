@@ -636,8 +636,8 @@ COMMIT;
 
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
--- 3 Stored Procedures
--- 1️⃣ Book a ticket
+-- 4 Stored Procedures
+-- Book a ticket
 DELIMITER $$
 CREATE PROCEDURE BookTicket (
   IN p_ticket_no VARCHAR(50),
@@ -673,7 +673,7 @@ END $$
 
 DELIMITER ;
 
--- 2️⃣ Cancel a ticket
+-- Cancel a ticket
 DELIMITER $$
 CREATE PROCEDURE CancelTicket (IN p_ticket_id INT)
 BEGIN
@@ -700,7 +700,7 @@ END $$
 
 DELIMITER ;
 
--- 3️⃣ Update flight instance status
+-- Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatusAndDelay (
   IN p_instance_id INT,
@@ -729,8 +729,8 @@ END $$
 
 DELIMITER ;
 
--- 3 Triggers
--- 1️⃣ Release gate automatically after flight cancellation
+-- 2 Triggers
+-- Release gate automatically after flight cancellation
 DELIMITER $$
 CREATE TRIGGER release_gate_after_cancel
 AFTER UPDATE ON flight_instance
@@ -748,7 +748,7 @@ END $$
 DELIMITER ;
 
 -- REMOVED
--- -- 2️⃣ Auto-close gate after assignment
+-- -- Auto-close gate after assignment
 -- DELIMITER $$
 -- CREATE TRIGGER update_gate_status_after_assignment_insert
 -- AFTER INSERT ON gate_assignment
@@ -759,7 +759,8 @@ DELIMITER ;
 --     WHERE gate_id = NEW.gate_id;
 -- END$$
 -- DELIMITER ;
--- 3️⃣ Prevent invalid flight times
+
+-- Prevent invalid flight times
 DELIMITER $$
 CREATE TRIGGER check_flight_times
 BEFORE INSERT ON flight_instance
@@ -772,6 +773,9 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+
+
 -- Step 1: Create the user
 CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
 
