@@ -30,8 +30,10 @@ export default function Reservation() {
   const { account, accessType } = useAuth();
   const isAirlineAdmin = accessType === "airline-admin";
   const isPassenger = accessType === "passenger";
-  const airlineId = isAirlineAdmin ? account?.airline_id : undefined;
-  const passengerId = isPassenger ? account?.passenger_id : undefined;
+  const airlineId = isAirlineAdmin ? account?.airline_id ?? undefined : undefined;
+  const passengerId = isPassenger
+    ? account?.passenger_id ?? undefined
+    : undefined;
   const airlineLabel = account?.name
     ? account.name.split(" ")[0]
     : "their";
