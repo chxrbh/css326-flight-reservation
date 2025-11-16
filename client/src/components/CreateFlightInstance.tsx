@@ -25,15 +25,29 @@ import {
 } from "@/hooks/useApiQuery";
 import { useAuth } from "@/context/AuthContext";
 
-function toMySQLDateTime(local: string) {
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+function toUtcISOString(local: string) {
   if (!local) return local;
-  const [date, time] = local.split("T");
-  return `${date} ${time}:00`;
+  const normalized = local.length === 16 ? `${local}:00` : local;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return local;
+  return date.toISOString();
 }
 
 function fromMySQLDateTime(mysqlDT?: string) {
   if (!mysqlDT) return "";
-  return mysqlDT.replace(" ", "T").slice(0, 16);
+  const normalized = mysqlDT.includes("T")
+    ? mysqlDT
+    : mysqlDT.replace(" ", "T");
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "";
+  const yyyy = date.getFullYear();
+  const mm = pad2(date.getMonth() + 1);
+  const dd = pad2(date.getDate());
+  const HH = pad2(date.getHours());
+  const MM = pad2(date.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
 }
 
 function adjustLocalByMinutes(local: string, minutes: number) {
@@ -258,8 +272,8 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
         {
           flight_id: Number(form.flight_id),
           status: form.status,
-          departure_datetime: toMySQLDateTime(form.departure_datetime),
-          arrival_datetime: toMySQLDateTime(form.arrival_datetime),
+          departure_datetime: toUtcISOString(form.departure_datetime),
+          arrival_datetime: toUtcISOString(form.arrival_datetime),
           price_usd: priceValue,
         },
         {

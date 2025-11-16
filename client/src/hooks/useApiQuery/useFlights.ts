@@ -80,7 +80,7 @@ export function useCreateFlightInstance() {
       flight_id: number;
       price_usd: number;
       status?: "on-time" | "delayed" | "cancelled";
-      departure_datetime: string; // ISO local -> server expects MySQL-compatible string
+      departure_datetime: string; // UTC ISO string
       arrival_datetime: string;
     }) =>
       api("/flight-instances", {
