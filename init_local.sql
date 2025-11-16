@@ -667,7 +667,7 @@ END $$
 
 DELIMITER ;
 
--- 2️⃣ Cancel a ticket
+-- Cancel a ticket
 DELIMITER $$
 CREATE PROCEDURE CancelTicket (IN p_ticket_id BIGINT)
 BEGIN
@@ -694,7 +694,7 @@ END $$
 
 DELIMITER ;
 
--- 3️⃣ Update flight instance status
+-- Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatusAndDelay (
   IN p_instance_id BIGINT,
@@ -723,8 +723,8 @@ END $$
 
 DELIMITER ;
 
--- 3 Triggers
--- 1️⃣ Release gate automatically after flight cancellation
+-- 2 Triggers
+-- Release gate automatically after flight cancellation
 DELIMITER $$
 CREATE TRIGGER release_gate_after_cancel
 AFTER UPDATE ON flight_instance
