@@ -90,6 +90,14 @@ export default function Flight() {
                     </span>
                   ),
                 },
+                {
+                  label: "Gate",
+                  value: instance.gate_code ? (
+                    `Gate ${instance.gate_code}`
+                  ) : (
+                    <span className="text-muted-foreground">Unassigned</span>
+                  ),
+                },
                 { label: "Price", value: formatPrice(instance.price_usd) },
               ]}
               headerAction={

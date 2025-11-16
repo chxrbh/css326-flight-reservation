@@ -26,8 +26,29 @@ export type FlightInstance = {
   airline_id: number;
   airline_name: string;
   airline_code: string;
+  origin_airport_id: number;
   origin_code: string;
   dest_code: string;
+  gate_id: number | null;
+  gate_code: string | null;
+  gate_assignment_start: string | null;
+  gate_assignment_end: string | null;
+};
+
+export type GateOption = {
+  gate_id: number;
+  gate_code: string | null;
+  status: "active" | "closed" | "maintenance";
+  is_available: boolean;
+};
+
+export type GateOptionsResponse = {
+  instance_id: number;
+  origin_airport_id: number;
+  current_gate_id: number | null;
+  occupy_start_utc: string | null;
+  occupy_end_utc: string | null;
+  gates: GateOption[];
 };
 
 export function useFlightSchedules() {
@@ -82,8 +103,13 @@ export function useCreateFlightInstance() {
         airline_id: 0,
         airline_name: "",
         airline_code: "",
+        origin_airport_id: 0,
         origin_code: "",
         dest_code: "",
+        gate_id: null,
+        gate_code: null,
+        gate_assignment_start: null,
+        gate_assignment_end: null,
       };
       qc.setQueryData<FlightInstance[]>(["flight-instances"], (old) => [
         ...(old ?? []),
@@ -141,6 +167,30 @@ export function useUpdateFlightInstance() {
       if (ctx?.prev) qc.setQueryData(["flight-instances"], ctx.prev);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["flight-instances"] }),
+  });
+}
+
+export function useGateOptions(instanceId: number | null) {
+  return useQuery<GateOptionsResponse>({
+    queryKey: ["gate-options", instanceId],
+    enabled: Boolean(instanceId),
+    queryFn: () => api(`/flight-instances/${instanceId}/gates`),
+    staleTime: 1000 * 15,
+  });
+}
+
+export function useUpdateGateAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { instance_id: number; gate_id: number }) =>
+      api(`/flight-instances/${payload.instance_id}/gate`, {
+        method: "PUT",
+        body: JSON.stringify({ gate_id: payload.gate_id }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["flight-instances"] });
+      qc.invalidateQueries({ queryKey: ["gate-options"] });
+    },
   });
 }
 
