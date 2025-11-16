@@ -53,6 +53,7 @@ export default function Reservation() {
 
   const updateStatus = useUpdateReservationStatus();
   const [updatingTicketId, setUpdatingTicketId] = useState<number | null>(null);
+  const [updatingAction, setUpdatingAction] = useState<"check-in" | "cancel" | null>(null);
   const [seatDrafts, setSeatDrafts] = useState<Record<number, string>>({});
 
   const errorMessage =
@@ -62,6 +63,7 @@ export default function Reservation() {
 
   const handleCheckIn = (ticketId: number, seatValue?: string) => {
     setUpdatingTicketId(ticketId);
+    setUpdatingAction("check-in");
     updateStatus.mutate(
       {
         ticket_id: ticketId,
@@ -82,7 +84,40 @@ export default function Reservation() {
             variant: "destructive",
           });
         },
-        onSettled: () => setUpdatingTicketId(null),
+        onSettled: () => {
+          setUpdatingTicketId(null);
+          setUpdatingAction(null);
+        },
+      }
+    );
+  };
+
+  const handleCancelReservation = (ticketId: number) => {
+    setUpdatingTicketId(ticketId);
+    setUpdatingAction("cancel");
+    updateStatus.mutate(
+      {
+        ticket_id: ticketId,
+        status: "cancelled",
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Ticket cancelled",
+            description: "Reservation status updated to cancelled.",
+          });
+        },
+        onError: (mutationError: any) => {
+          toast({
+            title: "Cancellation failed",
+            description: mutationError?.message || "Server error",
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          setUpdatingTicketId(null);
+          setUpdatingAction(null);
+        },
       }
     );
   };
@@ -153,10 +188,17 @@ export default function Reservation() {
                   reservation.seat ??
                   "";
                 const canCheckIn =
-                  isAirlineAdmin && reservation.status !== "checked-In";
-                const isUpdating =
+                  isAirlineAdmin && reservation.status === "booked";
+                const canCancel =
+                  reservation.status !== "cancelled" &&
+                  (isAirlineAdmin || isPassenger);
+                const isTicketUpdating =
                   updateStatus.isPending &&
                   updatingTicketId === reservation.ticket_id;
+                const isCheckInUpdating =
+                  isTicketUpdating && updatingAction === "check-in";
+                const isCancelUpdating =
+                  isTicketUpdating && updatingAction === "cancel";
 
                 return (
                   <FlightInfoCard
@@ -191,44 +233,66 @@ export default function Reservation() {
                           Ticket {reservation.ticket_no} • Passenger{" "}
                           {reservation.first_name} {reservation.last_name}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           <span className="text-muted-foreground">
                             Instance #{reservation.instance_id}
                           </span>
-                          {canCheckIn && (
-                            <div className="flex items-center gap-2">
-                              <div className="flex flex-col text-xs">
-                                <Label htmlFor={`seat-${reservation.ticket_id}`}>
-                                  Seat
-                                </Label>
-                                <Input
-                                  id={`seat-${reservation.ticket_id}`}
-                                  className="h-8 w-24 text-sm"
-                                  placeholder="e.g. 12A"
-                                  value={seatValue}
-                                  onChange={(event) =>
-                                    setSeatDrafts((prev) => ({
-                                      ...prev,
-                                      [reservation.ticket_id]:
-                                        event.target.value,
-                                    }))
+                          <div className="flex flex-wrap items-center gap-3">
+                            {canCheckIn && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex flex-col text-xs">
+                                  <Label
+                                    htmlFor={`seat-${reservation.ticket_id}`}
+                                  >
+                                    Seat
+                                  </Label>
+                                  <Input
+                                    id={`seat-${reservation.ticket_id}`}
+                                    className="h-8 w-24 text-sm"
+                                    placeholder="e.g. 12A"
+                                    value={seatValue}
+                                    onChange={(event) =>
+                                      setSeatDrafts((prev) => ({
+                                        ...prev,
+                                        [reservation.ticket_id]:
+                                          event.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleCheckIn(
+                                      reservation.ticket_id,
+                                      seatValue
+                                    )
                                   }
-                                />
+                                  disabled={isTicketUpdating}
+                                >
+                                  {isCheckInUpdating
+                                    ? "Updating..."
+                                    : "Check-in"}
+                                </Button>
                               </div>
+                            )}
+                            {canCancel && (
                               <Button
                                 size="sm"
+                                variant="destructive"
                                 onClick={() =>
-                                  handleCheckIn(
-                                    reservation.ticket_id,
-                                    seatValue
+                                  handleCancelReservation(
+                                    reservation.ticket_id
                                   )
                                 }
-                                disabled={isUpdating}
+                                disabled={isTicketUpdating}
                               >
-                                {isUpdating ? "Updating..." : "Check-in"}
+                                {isCancelUpdating
+                                  ? "Cancelling..."
+                                  : "Cancel Ticket"}
                               </Button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
                     }
