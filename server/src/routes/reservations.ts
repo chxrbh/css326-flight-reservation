@@ -114,7 +114,10 @@ router.post("/", async (req, res) => {
     }
 
     const [flightRows] = await pool.query<RowDataPacket[]>(
-      `SELECT fs.flight_no, fi.price_usd
+      `SELECT fs.flight_no,
+              fi.price_usd,
+              fi.departure_datetime,
+              fi.arrival_datetime
        FROM flight_instance fi
        JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
        WHERE fi.instance_id = ?
@@ -128,6 +131,58 @@ router.post("/", async (req, res) => {
 
     const flightNo = String(flightRows[0].flight_no);
     const instancePrice = flightRows[0].price_usd ?? null;
+    const departureDateTime = flightRows[0].departure_datetime;
+    const arrivalDateTime = flightRows[0].arrival_datetime;
+    if (!departureDateTime || !arrivalDateTime) {
+      return res
+        .status(500)
+        .json({ error: "Flight instance is missing scheduling data" });
+    }
+
+    const [duplicateRows] = await pool.query<RowDataPacket[]>(
+      `SELECT ticket_id
+       FROM ticket
+       WHERE passenger_id = ?
+         AND instance_id = ?
+         AND status <> 'cancelled'
+       LIMIT 1`,
+      [passengerId, instanceId]
+    );
+
+    if (duplicateRows.length > 0) {
+      return res
+        .status(409)
+        .json({ error: "Passenger already has a booking for this flight" });
+    }
+
+    const [conflictRows] = await pool.query<RowDataPacket[]>(
+      `SELECT t.ticket_id,
+              fs.flight_no,
+              fi.departure_datetime,
+              fi.arrival_datetime
+       FROM ticket t
+       JOIN flight_instance fi ON t.instance_id = fi.instance_id
+       JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
+       WHERE t.passenger_id = ?
+         AND t.status <> 'cancelled'
+         AND fi.departure_datetime < ?
+         AND fi.arrival_datetime > ?
+       ORDER BY fi.departure_datetime ASC
+       LIMIT 1`,
+      [passengerId, arrivalDateTime, departureDateTime]
+    );
+
+    if (conflictRows.length > 0) {
+      const conflict = conflictRows[0];
+      return res.status(409).json({
+        error: `Time conflict with ${conflict.flight_no}`,
+        details: {
+          ticket_id: conflict.ticket_id,
+          departure_datetime: conflict.departure_datetime,
+          arrival_datetime: conflict.arrival_datetime,
+        },
+      });
+    }
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
     const bookingDate = new Date().toISOString().slice(0, 10);
     const ticketPrice = price_usd ?? instancePrice;

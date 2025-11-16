@@ -15,6 +15,11 @@ const NAV_ITEMS: NavItem[] = [
     allowed: ["passenger"],
   },
   {
+    path: "/profile",
+    label: "Profile",
+    allowed: ["passenger"],
+  },
+  {
     path: "/reservation",
     label: "Reservations",
     allowed: ["passenger", "airline-admin", "super-admin"],

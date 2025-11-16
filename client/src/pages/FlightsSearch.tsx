@@ -13,12 +13,7 @@ import {
 } from "@/hooks/useApiQuery";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return date.toLocaleString();
-}
+import { formatLocalDateTime } from "@/lib/datetime";
 function formatPrice(value?: number | string | null) {
   if (value === null || value === undefined) return "-";
   const num = typeof value === "string" ? Number(value) : value;
@@ -263,11 +258,11 @@ export default function FlightsSearch() {
                   details={[
                     {
                       label: "Departure",
-                      value: formatDateTime(flight.departure_datetime),
+                      value: formatLocalDateTime(flight.departure_datetime),
                     },
                     {
                       label: "Arrival",
-                      value: formatDateTime(flight.arrival_datetime),
+                      value: formatLocalDateTime(flight.arrival_datetime),
                     },
                     { label: "Price", value: formatPrice(flight.price_usd) },
                     {
