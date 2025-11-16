@@ -1,7 +1,7 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import type { AccessType } from "@/data/mockAccounts";
+import type { AccessType } from "@/types/auth";
 
 type ProtectedRouteProps = {
   allowed: AccessType[];
@@ -15,8 +15,15 @@ export default function ProtectedRoute({
   children,
 }: ProtectedRouteProps) {
   const { account, accessType } = useAuth();
+  const location = useLocation();
 
-  if (!account || !accessType || !allowed.includes(accessType)) {
+  if (!account || !accessType) {
+    return (
+      <Navigate to="/auth" replace state={{ from: location }} />
+    );
+  }
+
+  if (!allowed.includes(accessType)) {
     return <Navigate to={fallbackPath} replace />;
   }
 

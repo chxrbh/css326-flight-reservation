@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import type { AccessType } from "@/data/mockAccounts";
+import type { AccessType } from "@/types/auth";
 
 type NavItem = {
   path: string;
@@ -27,6 +27,11 @@ const NAV_ITEMS: NavItem[] = [
   {
     path: "/airlines",
     label: "Airlines",
+    allowed: ["super-admin"],
+  },
+  {
+    path: "/airline-admins",
+    label: "Airline Accounts",
     allowed: ["super-admin"],
   },
 ];

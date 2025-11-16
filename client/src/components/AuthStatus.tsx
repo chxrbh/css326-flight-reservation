@@ -1,27 +1,47 @@
-import { mockAccounts } from "@/data/mockAccounts";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function AuthStatus() {
-  const { account, login } = useAuth();
+  const { account, passenger, accessType, logout } = useAuth();
+
+  const displayName = passenger
+    ? `${passenger.first_name} ${passenger.last_name}`.trim()
+    : account?.name ?? account?.email ?? "";
 
   return (
-    <div className="flex flex-col gap-1 text-sm">
-      <Label htmlFor="account-select" className="text-xs uppercase text-[#D1E2E6]">
-        Active Account
+    <div className="flex flex-col gap-2 text-sm">
+      <Label className="text-xs uppercase text-[#D1E2E6]">
+        {account ? "Signed in as" : "Authentication"}
       </Label>
-      <select
-        id="account-select"
-        className="border rounded-md px-3 py-2 bg-white text-sm"
-        value={account?.id ?? ""}
-        onChange={(event) => login(Number(event.target.value))}
-      >
-        {mockAccounts.map((acc) => (
-          <option key={acc.id} value={acc.id}>
-            {acc.name} — {acc.access_type}
-          </option>
-        ))}
-      </select>
+      {account ? (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex flex-col">
+            <span className="font-medium leading-tight">{displayName}</span>
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              {account.email} • {accessType?.replace("-", " ")}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={logout}
+            className="w-full sm:w-auto"
+          >
+            Sign out
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <span className="text-xs text-muted-foreground">
+            Sign in or create a passenger account.
+          </span>
+          <Button asChild size="sm" className="w-full sm:w-auto">
+            <Link to="/auth">Open auth page</Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

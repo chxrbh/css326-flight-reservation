@@ -46,15 +46,20 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// ✅ SIGN IN — checks hashed password
+// ✅ SIGN IN — checks hashed password (supports legacy plaintext seeds)
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // 1️⃣ Compare hashed passwords (SHA2(?, 256))
+    // 1️⃣ Compare hashed passwords (SHA2(?, 256)) but also allow legacy plaintext rows
+    // so that seed data from init_local.sql continues to work.
     const [rows]: any = await pool.query(
-      "SELECT * FROM account WHERE email = ? AND password = SHA2(?, 256)",
-      [email, password]
+      `SELECT acc.*, aa.airline_id
+       FROM account acc
+       LEFT JOIN airline_admin aa ON acc.account_id = aa.account_id
+       WHERE acc.email = ?
+         AND (acc.password = SHA2(?, 256) OR acc.password = ?)`,
+      [email, password, password]
     );
 
     if (rows.length === 0) {
@@ -62,17 +67,20 @@ router.post("/signin", async (req, res) => {
     }
 
     const account = rows[0];
+    let passenger = null;
 
-    // 2️⃣ Optionally get passenger info
-    const [passengerRows]: any = await pool.query(
-      "SELECT * FROM passenger WHERE account_id = ?",
-      [account.account_id]
-    );
+    if (account.access_type === "passenger") {
+      const [passengerRows]: any = await pool.query(
+        "SELECT * FROM passenger WHERE account_id = ? LIMIT 1",
+        [account.account_id]
+      );
+      passenger = passengerRows[0] || null;
+    }
 
     res.json({
       message: "Signin successful",
       account,
-      passenger: passengerRows[0] || null,
+      passenger,
     });
   } catch (error) {
     console.error("Signin error:", error);

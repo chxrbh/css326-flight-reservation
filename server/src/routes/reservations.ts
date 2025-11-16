@@ -3,17 +3,20 @@ import { pool } from "../db";
 import { RowDataPacket, OkPacket } from "mysql2";
 
 const router = Router();
+const ALLOWED_STATUSES = ["booked", "checked-In", "cancelled"];
 
 router.get("/", async (req, res) => {
-  const { airline_id, flight_id, passenger_id } = req.query;
+  const { airline_id, flight_id, passenger_id, status } = req.query;
 
   const filters: string[] = [];
-  const params: Array<number> = [];
+  const params: Array<number | string> = [];
 
   if (typeof airline_id !== "undefined") {
     const id = Number(airline_id);
     if (!id || Number.isNaN(id)) {
-      return res.status(400).json({ error: "airline_id must be a valid number" });
+      return res
+        .status(400)
+        .json({ error: "airline_id must be a valid number" });
     }
     filters.push("al.airline_id = ?");
     params.push(id);
@@ -21,7 +24,9 @@ router.get("/", async (req, res) => {
   if (typeof flight_id !== "undefined") {
     const id = Number(flight_id);
     if (!id || Number.isNaN(id)) {
-      return res.status(400).json({ error: "flight_id must be a valid number" });
+      return res
+        .status(400)
+        .json({ error: "flight_id must be a valid number" });
     }
     filters.push("fs.flight_id = ?");
     params.push(id);
@@ -35,6 +40,15 @@ router.get("/", async (req, res) => {
     }
     filters.push("p.passenger_id = ?");
     params.push(id);
+  }
+  if (typeof status !== "undefined") {
+    if (typeof status !== "string" || !ALLOWED_STATUSES.includes(status)) {
+      return res
+        .status(400)
+        .json({ error: "status must be booked, checked-In, or cancelled" });
+    }
+    filters.push("t.status = ?");
+    params.push(status);
   }
 
   try {
@@ -100,7 +114,7 @@ router.post("/", async (req, res) => {
     }
 
     const [flightRows] = await pool.query<RowDataPacket[]>(
-      `SELECT fs.flight_no
+      `SELECT fs.flight_no, fi.price_usd
        FROM flight_instance fi
        JOIN flight_schedule fs ON fi.flight_id = fs.flight_id
        WHERE fi.instance_id = ?
@@ -113,15 +127,19 @@ router.post("/", async (req, res) => {
     }
 
     const flightNo = String(flightRows[0].flight_no);
+    const instancePrice = flightRows[0].price_usd ?? null;
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
     const bookingDate = new Date().toISOString().slice(0, 10);
+    const ticketPrice = price_usd ?? instancePrice;
 
-    const [result]: any = await pool.query(
-      `INSERT INTO ticket
-         (ticket_no, passenger_id, instance_id, seat, price_usd, booking_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'booked')`,
-      [ticketNo, passengerId, instanceId, seat || null, price_usd ?? null, bookingDate]
-    );
+    const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?, ?)`, [
+      ticketNo,
+      passengerId,
+      instanceId,
+      seat ?? null,
+      price_usd ?? null,
+    ]);
+    const ticketId = result[0][0].ticket_id;
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT t.ticket_id,
@@ -154,9 +172,8 @@ router.post("/", async (req, res) => {
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
        WHERE t.ticket_id = ?
        LIMIT 1`,
-      [result.insertId]
+      [ticketId]
     );
-
     res.status(201).json(rows[0]);
   } catch (err: any) {
     console.error("POST /reservations error:", err);
@@ -168,29 +185,47 @@ router.patch("/:ticketId/status", async (req, res) => {
   const ticketId = Number(req.params.ticketId);
   const { status, seat } = req.body || {};
 
-  const allowedStatuses = ["booked", "checked-In", "cancelled"];
-
   if (!ticketId || Number.isNaN(ticketId)) {
     return res.status(400).json({ error: "Invalid ticket ID" });
   }
 
-  if (!status || !allowedStatuses.includes(status)) {
+  if (!status || !ALLOWED_STATUSES.includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
   }
 
   try {
-    const fields: string[] = ["status = ?"];
-    const params: any[] = [status];
+    const updateFields: string[] = ["status = ?"];
+    const updateParams: any[] = [status];
     if (typeof seat !== "undefined") {
-      fields.push("seat = ?");
-      params.push(seat || null);
+      updateFields.push("seat = ?");
+      updateParams.push(seat || null);
     }
-    params.push(ticketId);
 
-    const [result] = await pool.query<OkPacket>(
-      `UPDATE ticket SET ${fields.join(", ")} WHERE ticket_id = ?`,
-      params
-    );
+    let result: OkPacket;
+    if (status === "cancelled") {
+      // Use stored procedure to cancel
+      [result] = await pool.query<OkPacket>(`CALL CancelTicket(?)`, [ticketId]);
+    } else if (status === "checked-In") {
+      // Call stored procedure to check-in + set seat
+      [result] = await pool.query<OkPacket>(`CALL CheckInTicket(?, ?)`, [
+        ticketId,
+        seat || null,
+      ]);
+      // } else {
+      //   // Keep other status updates
+      //   [result] = await pool.query<OkPacket>(
+      //     `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
+      //     [status, seat || null, ticketId]
+      //   );
+    } else if (status === "booked") {
+      const setClause = updateFields.join(", ");
+      [result] = await pool.query<OkPacket>(
+        `UPDATE ticket SET ${setClause} WHERE ticket_id = ?`,
+        [...updateParams, ticketId]
+      );
+    } else {
+      return res.status(400).json({ error: "Invalid ticket status" });
+    }
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Ticket not found" });
