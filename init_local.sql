@@ -472,16 +472,32 @@ COMMIT;
 -- 1️⃣ Book a ticket
 DELIMITER $$
 CREATE PROCEDURE BookTicket(
+    IN p_ticket_no VARCHAR(50),
     IN p_passenger_id INT,
     IN p_instance_id INT,
-    IN p_price_usd DECIMAL(10,2),
-    IN p_seat VARCHAR(10)
+    IN p_seat VARCHAR(10),
+    IN p_price_usd DECIMAL(10,2)
 )
 BEGIN
-    INSERT INTO ticket (ticket_no, passenger_id, instance_id, price_usd, status, booking_date, seat)
-    VALUES (CONCAT('TCK', LPAD(FLOOR(RAND() * 999999),6,'0')), 
-            p_passenger_id, p_instance_id, p_price_usd, 
-            'booked', CURDATE(), p_seat);
+    INSERT INTO ticket (
+      ticket_no, 
+      passenger_id, 
+      instance_id, 
+      price_usd, 
+      seat,
+      status, 
+      booking_date 
+    )
+    VALUES (
+      p_ticket_no,
+      p_passenger_id, 
+      p_instance_id,
+      p_seat ,
+      p_price_usd,
+      'booked', 
+      CURDATE()
+      );
+      SELECT LAST_INSERT_ID() AS ticket_id;
 END$$
 DELIMITER ;
 

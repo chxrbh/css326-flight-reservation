@@ -13,7 +13,9 @@ router.get("/", async (req, res) => {
   if (typeof airline_id !== "undefined") {
     const id = Number(airline_id);
     if (!id || Number.isNaN(id)) {
-      return res.status(400).json({ error: "airline_id must be a valid number" });
+      return res
+        .status(400)
+        .json({ error: "airline_id must be a valid number" });
     }
     filters.push("al.airline_id = ?");
     params.push(id);
@@ -21,7 +23,9 @@ router.get("/", async (req, res) => {
   if (typeof flight_id !== "undefined") {
     const id = Number(flight_id);
     if (!id || Number.isNaN(id)) {
-      return res.status(400).json({ error: "flight_id must be a valid number" });
+      return res
+        .status(400)
+        .json({ error: "flight_id must be a valid number" });
     }
     filters.push("fs.flight_id = ?");
     params.push(id);
@@ -114,14 +118,16 @@ router.post("/", async (req, res) => {
 
     const flightNo = String(flightRows[0].flight_no);
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
-    const bookingDate = new Date().toISOString().slice(0, 10);
+    // const bookingDate = new Date().toISOString().slice(0, 10);
 
-    const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?)`, [
-  passengerId,
-  instanceId,
-  price_usd ?? 0,
-  seat ?? null
-]);
+    const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?, ?)`, [
+      ticketNo,
+      passengerId,
+      instanceId,
+      seat ?? null,
+      price_usd ?? null,
+    ]);
+    const ticketId = result[0][0].ticket_id;
 
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT t.ticket_id,
@@ -154,9 +160,8 @@ router.post("/", async (req, res) => {
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
        WHERE t.ticket_id = ?
        LIMIT 1`,
-      [result.insertId]
+      [ticketId]
     );
-
     res.status(201).json(rows[0]);
   } catch (err: any) {
     console.error("POST /reservations error:", err);
@@ -187,18 +192,17 @@ router.patch("/:ticketId/status", async (req, res) => {
     }
     params.push(ticketId);
 
-let result: OkPacket;
-if (status === "cancelled") {
-  // Use stored procedure to cancel
-  [result] = await pool.query<OkPacket>(`CALL CancelTicket(?)`, [ticketId]);
-} else {
-  // Keep other status updates
-  [result] = await pool.query<OkPacket>(
-    `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
-    [status, seat || null, ticketId]
-  );
-}
-
+    let result: OkPacket;
+    if (status === "cancelled") {
+      // Use stored procedure to cancel
+      [result] = await pool.query<OkPacket>(`CALL CancelTicket(?)`, [ticketId]);
+    } else {
+      // Keep other status updates
+      [result] = await pool.query<OkPacket>(
+        `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
+        [status, seat || null, ticketId]
+      );
+    }
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Ticket not found" });
