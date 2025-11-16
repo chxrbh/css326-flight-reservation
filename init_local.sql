@@ -772,6 +772,44 @@ BEGIN
 END $$
 
 DELIMITER ;
+
+-- 4️⃣ Ensure gate assignments never overlap for the same gate
+DELIMITER $$
+CREATE TRIGGER prevent_gate_assignment_conflict_insert
+BEFORE INSERT ON gate_assignment
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM gate_assignment ga
+    WHERE ga.gate_id = NEW.gate_id
+      AND ga.occupy_start_utc < NEW.occupy_end_utc
+      AND ga.occupy_end_utc > NEW.occupy_start_utc
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
+  END IF;
+END $$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER prevent_gate_assignment_conflict_update
+BEFORE UPDATE ON gate_assignment
+FOR EACH ROW
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM gate_assignment ga
+    WHERE ga.gate_id = NEW.gate_id
+      AND ga.assignment_id <> NEW.assignment_id
+      AND ga.occupy_start_utc < NEW.occupy_end_utc
+      AND ga.occupy_end_utc > NEW.occupy_start_utc
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Gate assignment conflict detected';
+  END IF;
+END $$
+DELIMITER ;
 -- Step 1: Create the user
 CREATE USER 'webuser'@'localhost' IDENTIFIED BY 'webuser';
 
