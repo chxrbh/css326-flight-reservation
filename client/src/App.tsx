@@ -75,7 +75,7 @@ export default function App() {
                 <Route
                   path="/profile"
                   element={
-                    <ProtectedRoute allowed={["passenger"]}>
+                    <ProtectedRoute allowed={["passenger", "airline-admin"]}>
                       <Profile />
                     </ProtectedRoute>
                   }

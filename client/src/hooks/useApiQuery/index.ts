@@ -5,3 +5,4 @@ export * from "./useFlightSearch";
 export * from "./useReservations";
 export * from "./useAirlineAdmins";
 export * from "./usePassengerProfile";
+export * from "./useAirlineAdminProfile";

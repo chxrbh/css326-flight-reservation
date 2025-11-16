@@ -25,6 +25,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updatePassenger: (passenger: PassengerRecord | null) => void;
+  updateAccount: (updates: Partial<AuthAccount>) => void;
 };
 
 const STORAGE_KEY = "auth_session";
@@ -127,6 +128,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [persistSession]
   );
 
+  const updateAccount = useCallback(
+    (updates: Partial<AuthAccount>) => {
+      persistSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          account: {
+            ...prev.account,
+            ...updates,
+          },
+        };
+      });
+    },
+    [persistSession]
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       account: session?.account ?? null,
@@ -135,8 +152,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       login,
       logout,
       updatePassenger,
+      updateAccount,
     }),
-    [session, login, logout, updatePassenger]
+    [session, login, logout, updatePassenger, updateAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
