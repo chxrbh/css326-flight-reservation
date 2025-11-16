@@ -3,12 +3,13 @@ import { pool } from "../db";
 import { RowDataPacket, OkPacket } from "mysql2";
 
 const router = Router();
+const ALLOWED_STATUSES = ["booked", "checked-In", "cancelled"];
 
 router.get("/", async (req, res) => {
-  const { airline_id, flight_id, passenger_id } = req.query;
+  const { airline_id, flight_id, passenger_id, status } = req.query;
 
   const filters: string[] = [];
-  const params: Array<number> = [];
+  const params: Array<number | string> = [];
 
   if (typeof airline_id !== "undefined") {
     const id = Number(airline_id);
@@ -39,6 +40,15 @@ router.get("/", async (req, res) => {
     }
     filters.push("p.passenger_id = ?");
     params.push(id);
+  }
+  if (typeof status !== "undefined") {
+    if (typeof status !== "string" || !ALLOWED_STATUSES.includes(status)) {
+      return res
+        .status(400)
+        .json({ error: "status must be booked, checked-In, or cancelled" });
+    }
+    filters.push("t.status = ?");
+    params.push(status);
   }
 
   try {
@@ -173,13 +183,11 @@ router.patch("/:ticketId/status", async (req, res) => {
   const ticketId = Number(req.params.ticketId);
   const { status, seat } = req.body || {};
 
-  const allowedStatuses = ["booked", "checked-In", "cancelled"];
-
   if (!ticketId || Number.isNaN(ticketId)) {
     return res.status(400).json({ error: "Invalid ticket ID" });
   }
 
-  if (!status || !allowedStatuses.includes(status)) {
+  if (!status || !ALLOWED_STATUSES.includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
   }
 

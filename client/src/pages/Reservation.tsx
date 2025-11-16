@@ -12,6 +12,9 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+const STATUS_OPTIONS = ["booked", "checked-In", "cancelled"] as const;
+type StatusFilterValue = (typeof STATUS_OPTIONS)[number];
+
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleDateString();
@@ -34,6 +37,7 @@ export default function Reservation() {
     : "their";
 
   const [flightFilter, setFlightFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue | "">("");
   const { data: flightSchedules = [] } = useFlightSchedules();
   const availableFlights = useMemo(() => {
     if (!isAirlineAdmin || !airlineId) return [];
@@ -49,6 +53,7 @@ export default function Reservation() {
     airlineId,
     flightId: flightFilter ? Number(flightFilter) : undefined,
     passengerId,
+    status: statusFilter || undefined,
   });
 
   const updateStatus = useUpdateReservationStatus();
@@ -180,8 +185,8 @@ export default function Reservation() {
           )}
         </CardHeader>
         <CardContent>
-          {isAirlineAdmin && (
-            <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <div className="mb-6 grid gap-4 md:grid-cols-2">
+            {isAirlineAdmin && (
               <div className="space-y-2">
                 <Label htmlFor="flight-filter">Filter by Flight</Label>
                 <select
@@ -198,8 +203,26 @@ export default function Reservation() {
                   ))}
                 </select>
               </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="status-filter">Filter by Status</Label>
+              <select
+                id="status-filter"
+                className="w-full h-10 rounded-md border px-3 bg-white"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilterValue | "")
+                }
+              >
+                <option value="">All statuses</option>
+                {STATUS_OPTIONS.map((statusOption) => (
+                  <option key={statusOption} value={statusOption}>
+                    {statusOption.replace("-", " ")}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+          </div>
 
           {isLoading ? (
             <div className="py-6 text-center">Loading reservations...</div>
