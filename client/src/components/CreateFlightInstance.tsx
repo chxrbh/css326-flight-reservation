@@ -24,46 +24,12 @@ import {
   useUpdateGateAssignment,
 } from "@/hooks/useApiQuery";
 import { useAuth } from "@/context/AuthContext";
-
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-function toUtcISOString(local: string) {
-  if (!local) return local;
-  const normalized = local.length === 16 ? `${local}:00` : local;
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) return local;
-  return date.toISOString();
-}
-
-function fromMySQLDateTime(mysqlDT?: string) {
-  if (!mysqlDT) return "";
-  const normalized = mysqlDT.includes("T")
-    ? mysqlDT
-    : mysqlDT.replace(" ", "T");
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) return "";
-  const yyyy = date.getFullYear();
-  const mm = pad2(date.getMonth() + 1);
-  const dd = pad2(date.getDate());
-  const HH = pad2(date.getHours());
-  const MM = pad2(date.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
-}
-
-function adjustLocalByMinutes(local: string, minutes: number) {
-  if (!local || typeof minutes !== "number" || Number.isNaN(minutes)) {
-    return local;
-  }
-  const inst = new Date(local);
-  if (Number.isNaN(inst.getTime())) return local;
-  inst.setMinutes(inst.getMinutes() + minutes);
-  const yyyy = inst.getFullYear();
-  const mm = String(inst.getMonth() + 1).padStart(2, "0");
-  const dd = String(inst.getDate()).padStart(2, "0");
-  const HH = String(inst.getHours()).padStart(2, "0");
-  const MM = String(inst.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
-}
+import {
+  addDurationLocal,
+  adjustLocalByMinutes,
+  fromMySQLDateTime,
+  toUtcISOString,
+} from "@/lib/datetime";
 
 type InstanceHandle = {
   openWith: (data: any) => void;
@@ -168,23 +134,6 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
         handleDialogToggle(true);
       },
     }));
-
-    function addDurationLocal(local: string, duration?: string | null) {
-      if (!local || !duration) return local;
-      const parts = duration.split(":");
-      const h = Number(parts[0] || 0);
-      const m = Number(parts[1] || 0);
-      const d = new Date(local);
-      if (isNaN(d.getTime())) return local;
-      d.setHours(d.getHours() + h);
-      d.setMinutes(d.getMinutes() + m);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const HH = String(d.getHours()).padStart(2, "0");
-      const MM = String(d.getMinutes()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
-    }
 
     const handleSave = async () => {
       if (isEditing) {

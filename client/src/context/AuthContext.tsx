@@ -24,6 +24,8 @@ type AuthContextValue = {
   accessType: AccessType | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updatePassenger: (passenger: PassengerRecord | null) => void;
+  updateAccount: (updates: Partial<AuthAccount>) => void;
 };
 
 const STORAGE_KEY = "auth_session";
@@ -67,15 +69,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   });
 
-  const persistSession = useCallback((next: AuthSession | null) => {
-    setSession(next);
-    if (typeof window === "undefined") return;
-    if (next) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
+  type SessionState = AuthSession | null;
+
+  const persistSession = useCallback(
+    (next: SessionState | ((prev: SessionState) => SessionState)) => {
+      setSession((prev) => {
+        const value =
+          typeof next === "function" ? (next as (p: SessionState) => SessionState)(prev) : next;
+        if (typeof window !== "undefined") {
+          if (value) {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+          } else {
+            window.localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+        return value;
+      });
+    },
+    []
+  );
 
   const login = useCallback<AuthContextValue["login"]>(
     async (email, password) => {
@@ -93,6 +105,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
     persistSession(null);
   }, [persistSession]);
 
+  const updatePassenger = useCallback(
+    (nextPassenger: PassengerRecord | null) => {
+      persistSession((prev) => {
+        if (!prev) return prev;
+        const fullName =
+          nextPassenger && (nextPassenger.first_name || nextPassenger.last_name)
+            ? `${nextPassenger.first_name ?? ""} ${
+                nextPassenger.last_name ?? ""
+              }`.trim()
+            : null;
+        return {
+          account: {
+            ...prev.account,
+            passenger_id: nextPassenger?.passenger_id ?? null,
+            name: fullName && fullName.length > 0 ? fullName : prev.account.email,
+          },
+          passenger: nextPassenger,
+        };
+      });
+    },
+    [persistSession]
+  );
+
+  const updateAccount = useCallback(
+    (updates: Partial<AuthAccount>) => {
+      persistSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          account: {
+            ...prev.account,
+            ...updates,
+          },
+        };
+      });
+    },
+    [persistSession]
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       account: session?.account ?? null,
@@ -100,8 +151,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       accessType: session?.account.access_type ?? null,
       login,
       logout,
+      updatePassenger,
+      updateAccount,
     }),
-    [session, login, logout]
+    [session, login, logout, updatePassenger, updateAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

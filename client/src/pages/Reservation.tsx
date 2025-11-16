@@ -11,19 +11,10 @@ import {
 } from "@/hooks/useApiQuery";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { formatLocalDate, formatLocalDateTime } from "@/lib/datetime";
 
 const STATUS_OPTIONS = ["booked", "checked-In", "cancelled"] as const;
 type StatusFilterValue = (typeof STATUS_OPTIONS)[number];
-
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString();
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString();
-}
 
 export default function Reservation() {
   const { toast } = useToast();
@@ -271,9 +262,22 @@ export default function Reservation() {
                     destinationCode={reservation.destination_code}
                     destinationName={reservation.destination_name}
                     details={[
-                      { label: "Booking Date", value: formatDate(reservation.booking_date) },
-                      { label: "Departure", value: formatDateTime(reservation.departure_datetime) },
-                      { label: "Arrival", value: formatDateTime(reservation.arrival_datetime) },
+                      {
+                        label: "Booking Date",
+                        value: formatLocalDate(reservation.booking_date),
+                      },
+                      {
+                        label: "Departure",
+                        value: formatLocalDateTime(
+                          reservation.departure_datetime
+                        ),
+                      },
+                      {
+                        label: "Arrival",
+                        value: formatLocalDateTime(
+                          reservation.arrival_datetime
+                        ),
+                      },
                       {
                         label: "Price",
                         value:

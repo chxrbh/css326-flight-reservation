@@ -8,16 +8,11 @@ import type { FlightInstance } from "@/hooks/useApiQuery";
 import { useFlightInstances, useFlightSchedules } from "@/hooks/useApiQuery";
 import FlightInfoCard from "@/components/FlightInfoCard";
 import { useAuth } from "@/context/AuthContext";
+import { formatLocalDateTime } from "@/lib/datetime";
 
 type StatusFilterValue = "all" | FlightInstance["status"];
 type ScheduleFilterValue = "all" | number;
 type InstanceFilterParams = Parameters<typeof useFlightInstances>[0];
-
-function formatDT(dt?: string) {
-  if (!dt) return "-";
-  const d = new Date(dt);
-  return d.toLocaleString();
-}
 
 function formatPrice(value?: number | string | null) {
   if (value === null || value === undefined) return "-";
@@ -151,8 +146,14 @@ export default function Flight() {
               originCode={instance.origin_code}
               destinationCode={instance.dest_code}
               details={[
-                { label: "Departure", value: formatDT(instance.departure_datetime) },
-                { label: "Arrival", value: formatDT(instance.arrival_datetime) },
+                {
+                  label: "Departure",
+                  value: formatLocalDateTime(instance.departure_datetime),
+                },
+                {
+                  label: "Arrival",
+                  value: formatLocalDateTime(instance.arrival_datetime),
+                },
                 {
                   label: "Status",
                   value: (

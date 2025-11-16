@@ -7,7 +7,7 @@ const ADMIN_SELECT = `SELECT aa.employee_id,
                              aa.account_id,
                              aa.first_name,
                              aa.last_name,
-                             aa.hire_date,
+                             DATE_FORMAT(aa.hire_date, '%Y-%m-%d') AS hire_date,
                              aa.airline_id,
                              al.name              AS airline_name,
                              al.airline_iata_code AS airline_code,
@@ -15,6 +15,14 @@ const ADMIN_SELECT = `SELECT aa.employee_id,
                       FROM airline_admin aa
                       JOIN account acc ON aa.account_id = acc.account_id
                       JOIN airline al  ON aa.airline_id = al.airline_id`;
+
+async function fetchAdminProfile(accountId: number) {
+  const [rows] = await pool.query(
+    `${ADMIN_SELECT} WHERE aa.account_id = ? LIMIT 1`,
+    [accountId]
+  );
+  return (rows as any[])[0];
+}
 
 router.get("/", async (_req, res) => {
   try {
@@ -81,6 +89,69 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: err.message });
   } finally {
     connection.release();
+  }
+});
+
+router.get("/profile/:accountId", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "Invalid account id" });
+  }
+
+  try {
+    const profile = await fetchAdminProfile(accountId);
+    if (!profile) {
+      return res.status(404).json({ error: "Airline admin not found" });
+    }
+    res.json(profile);
+  } catch (err: any) {
+    console.error("GET /airline-admins/profile/:accountId error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/profile/:accountId", async (req, res) => {
+  const accountId = Number(req.params.accountId);
+  if (!accountId || Number.isNaN(accountId)) {
+    return res.status(400).json({ error: "Invalid account id" });
+  }
+
+  const { first_name, last_name, hire_date } = req.body || {};
+
+  if (!first_name || !last_name) {
+    return res
+      .status(400)
+      .json({ error: "first_name and last_name are required" });
+  }
+
+  let normalizedHireDate: string | null = null;
+  if (typeof hire_date === "string" && hire_date.trim()) {
+    const parsed = new Date(hire_date);
+    if (Number.isNaN(parsed.getTime())) {
+      return res.status(400).json({ error: "hire_date must be a valid date" });
+    }
+    normalizedHireDate = parsed.toISOString().split("T")[0];
+  } else if (hire_date === null) {
+    normalizedHireDate = null;
+  }
+
+  try {
+    const [result]: any = await pool.query(
+      `UPDATE airline_admin
+       SET first_name = ?, last_name = ?, hire_date = COALESCE(?, hire_date)
+       WHERE account_id = ?`,
+      [first_name, last_name, normalizedHireDate, accountId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Airline admin not found" });
+    }
+
+    const profile = await fetchAdminProfile(accountId);
+    res.json(profile);
+  } catch (err: any) {
+    console.error("PUT /airline-admins/profile/:accountId error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
