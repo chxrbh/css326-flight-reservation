@@ -115,8 +115,12 @@ export function useUpdateFlightInstance() {
           const scheduled =
             adjustMinutes(it.arrival_datetime, -(it.delayed_min ?? 0)) ??
             it.arrival_datetime;
+          const requestedDelay =
+            vars.status === "delayed" && typeof vars.delayed_min === "number"
+              ? vars.delayed_min
+              : 0;
           const targetDelay =
-            vars.status === "delayed" ? vars.delayed_min ?? 0 : 0;
+            requestedDelay && requestedDelay > 0 ? requestedDelay : 0;
           const newArrival =
             adjustMinutes(scheduled, targetDelay) ?? it.arrival_datetime;
           return {

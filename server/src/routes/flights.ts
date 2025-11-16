@@ -380,10 +380,10 @@ router.put("/flight-instances/:id", async (req, res) => {
           .json({ error: "delayed_min is required when status is delayed" });
       }
       const parsedDelay = Number(delayed_min);
-      if (Number.isNaN(parsedDelay) || parsedDelay < 0) {
+      if (Number.isNaN(parsedDelay) || parsedDelay <= 0) {
         return res
           .status(400)
-          .json({ error: "delayed_min must be a non-negative number" });
+          .json({ error: "delayed_min must be greater than 0" });
       }
       newDelay = parsedDelay;
       nextArrival.setMinutes(nextArrival.getMinutes() + parsedDelay);

@@ -535,6 +535,11 @@ CREATE PROCEDURE UpdateFlightStatusAndDelay(
   IN p_arrival_datetime DATETIME  -- same type as arrival_datetime
 )
 BEGIN
+  IF p_status = 'delayed' AND (p_delayed_min IS NULL OR p_delayed_min <= 0) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'DELAY_MIN_MUST_BE_POSITIVE';
+  END IF;
+
   UPDATE flight_instance
   SET status = p_status,
       delayed_min = p_delayed_min,

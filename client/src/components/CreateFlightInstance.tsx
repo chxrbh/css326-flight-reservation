@@ -150,11 +150,11 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
           form.status === "delayed" &&
           (delayMinutes === undefined ||
             Number.isNaN(delayMinutes) ||
-            delayMinutes < 0)
+            delayMinutes <= 0)
         ) {
           toast({
             title: "Invalid delay",
-            description: "Provide a non-negative number of minutes.",
+            description: "Provide a positive number of minutes.",
             variant: "destructive",
           });
           return;
@@ -162,9 +162,13 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
       }
 
       if (form.instance_id) {
-        const delayMinutes =
+        const rawDelay =
           form.status === "delayed"
             ? Number(form.delayed_min || 0)
+            : undefined;
+        const delayMinutes =
+          rawDelay !== undefined && !Number.isNaN(rawDelay) && rawDelay > 0
+            ? rawDelay
             : undefined;
         updateInstance.mutate(
           {
@@ -312,9 +316,10 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                           | "on-time"
                           | "delayed"
                           | "cancelled";
+                        const rawDelay = Number(s.delayed_min || 0);
                         const delayMinutes =
-                          nextStatus === "delayed"
-                            ? Number(s.delayed_min || 0)
+                          nextStatus === "delayed" && rawDelay > 0
+                            ? rawDelay
                             : 0;
                         return {
                           ...s,
@@ -343,11 +348,13 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                   <Label>Delay (minutes) *</Label>
                   <Input
                     type="number"
-                    min={0}
+                    min={1}
                     value={form.delayed_min}
                     onChange={(e) => {
                       const raw = e.target.value;
                       const minutes = Number(raw || 0);
+                      const safeMinutes =
+                        Number.isNaN(minutes) || minutes <= 0 ? 0 : minutes;
                       setForm((s) => ({
                         ...s,
                         delayed_min: raw,
@@ -355,7 +362,7 @@ const CreateFlightInstance = forwardRef<InstanceHandle | null>(
                           scheduledArrivalLocal && isEditing
                             ? adjustLocalByMinutes(
                                 scheduledArrivalLocal,
-                                Number.isNaN(minutes) ? 0 : minutes
+                                safeMinutes
                               )
                             : s.arrival_datetime,
                       }));
