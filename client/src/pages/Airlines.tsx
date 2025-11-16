@@ -457,7 +457,7 @@ export default function Airlines() {
                                 <Button
                                   onClick={handleUpdate}
                                   disabled={updateAirline.isPending}
-                                  className="bg-gradient-primary hover:opacity-90"
+                                  className="bg-primary hover:bg-[#0D5A8F]"
                                 >
                                   {updateAirline.isPending
                                     ? "Saving..."

@@ -20,14 +20,14 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <div className="min-h-screen bg-gray-50 text-gray-900">
-            <header className="bg-white border-b">
+            <header className="bg-[#18599E] border-b">
               <div className="max-w-6xl mx-auto px-6 py-3 space-y-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="text-lg font-semibold">
+                    <div className="text-lg font-semibold text-white">
                       Flight Reservation
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-[#CAD1E3]">
                       Protected routes by access type
                     </div>
                   </div>

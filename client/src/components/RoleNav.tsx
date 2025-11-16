@@ -57,7 +57,7 @@ export default function RoleNav() {
             className={`pb-2 border-b-2 transition-colors ${
               isActive
                 ? "border-primary text-primary font-medium"
-                : "border-transparent text-muted-foreground hover:text-primary"
+                : "border-transparent text-[#D1E2E6] hover:text-primary"
             }`}
           >
             {item.label}
