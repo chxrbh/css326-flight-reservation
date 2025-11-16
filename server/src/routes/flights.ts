@@ -270,6 +270,16 @@ router.get("/flight-instances", async (req, res) => {
       : rawStatus
         ? [rawStatus]
         : [];
+    let flightIdFilter: number | null = null;
+    if (req.query.flight_id !== undefined) {
+      const parsedFlightId = Number(req.query.flight_id);
+      if (Number.isNaN(parsedFlightId) || parsedFlightId <= 0) {
+        return res
+          .status(400)
+          .json({ error: "flight_id must be a valid number" });
+      }
+      flightIdFilter = parsedFlightId;
+    }
 
     for (const value of rawStatusValues) {
       const normalized = String(value)
@@ -289,12 +299,17 @@ router.get("/flight-instances", async (req, res) => {
     }
 
     const whereClauses: string[] = [];
-    const params: Array<string> = [];
+    const params: Array<string | number> = [];
 
     if (statusFilters.length) {
       const placeholders = statusFilters.map(() => "?").join(", ");
       whereClauses.push(`fi.status IN (${placeholders})`);
       params.push(...statusFilters);
+    }
+
+    if (flightIdFilter !== null) {
+      whereClauses.push("fi.flight_id = ?");
+      params.push(flightIdFilter);
     }
 
     const whereClause = whereClauses.length

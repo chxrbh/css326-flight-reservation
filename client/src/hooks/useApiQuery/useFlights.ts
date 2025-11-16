@@ -66,15 +66,26 @@ export function useEachFlightSchedules(id: number) {
   });
 }
 
-export function useFlightInstances(params?: {
+type FlightInstanceFilters = {
   status?: FlightInstance["status"][];
-}) {
+  flight_id?: number;
+};
+
+export function useFlightInstances(params?: FlightInstanceFilters) {
+  const hasFilters = Boolean(
+    params && ((params.status && params.status.length) || params.flight_id)
+  );
   return useQuery<FlightInstance[]>({
-    queryKey: ["flight-instances", params],
+    queryKey: hasFilters
+      ? ["flight-instances", params]
+      : ["flight-instances"],
     queryFn: () => {
       const searchParams = new URLSearchParams();
       if (params?.status && params.status.length) {
         searchParams.set("status", params.status.join(","));
+      }
+      if (params?.flight_id) {
+        searchParams.set("flight_id", String(params.flight_id));
       }
       const suffix = searchParams.toString();
       return api(`/flight-instances${suffix ? `?${suffix}` : ""}`);

@@ -1,15 +1,17 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import CreateFlightSchedule from "@/components/CreateFlightSchedule";
 import CreateFlightInstance from "@/components/CreateFlightInstance";
 import type { FlightInstance } from "@/hooks/useApiQuery";
-import { useFlightInstances } from "@/hooks/useApiQuery";
+import { useFlightInstances, useFlightSchedules } from "@/hooks/useApiQuery";
 import FlightInfoCard from "@/components/FlightInfoCard";
 import { useAuth } from "@/context/AuthContext";
 
 type StatusFilterValue = "all" | FlightInstance["status"];
+type ScheduleFilterValue = "all" | number;
+type InstanceFilterParams = Parameters<typeof useFlightInstances>[0];
 
 function formatDT(dt?: string) {
   if (!dt) return "-";
@@ -26,20 +28,38 @@ function formatPrice(value?: number | string | null) {
 
 export default function Flight() {
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
-  const instanceFilters = useMemo(
-    () =>
-      statusFilter === "all"
-        ? undefined
-        : {
-            status: [statusFilter],
-          },
-    [statusFilter]
-  );
-  const { data: instances = [], isLoading, isError } =
-    useFlightInstances(instanceFilters);
+  const [scheduleFilter, setScheduleFilter] =
+    useState<ScheduleFilterValue>("all");
+  const instanceFilters = useMemo<InstanceFilterParams | undefined>(() => {
+    const filters: InstanceFilterParams = {};
+    if (statusFilter !== "all") {
+      filters.status = [statusFilter];
+    }
+    if (scheduleFilter !== "all") {
+      filters.flight_id = scheduleFilter;
+    }
+    return Object.keys(filters).length ? filters : undefined;
+  }, [statusFilter, scheduleFilter]);
+  const { data: schedules = [] } = useFlightSchedules();
   const { account, accessType } = useAuth();
   const isAirlineAdmin = accessType === "airline-admin";
   const adminAirlineId = account?.airline_id;
+  const scheduleOptions = useMemo(() => {
+    if (isAirlineAdmin && adminAirlineId) {
+      return schedules.filter((schedule) => schedule.airline_id === adminAirlineId);
+    }
+    return schedules;
+  }, [schedules, isAirlineAdmin, adminAirlineId]);
+  useEffect(() => {
+    if (
+      scheduleFilter !== "all" &&
+      !scheduleOptions.some((schedule) => schedule.flight_id === scheduleFilter)
+    ) {
+      setScheduleFilter("all");
+    }
+  }, [scheduleFilter, scheduleOptions]);
+  const { data: instances = [], isLoading, isError } =
+    useFlightInstances(instanceFilters);
   const filteredInstances = useMemo(() => {
     if (!isAirlineAdmin) return instances;
     return instances.filter(
@@ -84,6 +104,24 @@ export default function Flight() {
                 <option value="on-time">On time</option>
                 <option value="delayed">Delayed</option>
                 <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <label className="flex flex-col text-sm font-medium text-muted-foreground">
+              Flight schedule
+              <select
+                className="mt-1 border border-input bg-background rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                value={scheduleFilter === "all" ? "all" : String(scheduleFilter)}
+                onChange={(event) => {
+                  const { value } = event.target;
+                  setScheduleFilter(value === "all" ? "all" : Number(value));
+                }}
+              >
+                <option value="all">All schedules</option>
+                {scheduleOptions.map((schedule) => (
+                  <option key={schedule.flight_id} value={schedule.flight_id}>
+                    {schedule.flight_no} ({schedule.origin_code} &rarr; {schedule.dest_code})
+                  </option>
+                ))}
               </select>
             </label>
           </div>
