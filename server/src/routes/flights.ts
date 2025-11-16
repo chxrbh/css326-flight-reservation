@@ -6,6 +6,7 @@ import type { PoolConnection } from "mysql2/promise";
 const router = Router();
 const GATE_BUFFER_BEFORE_MINUTES = 90;
 const GATE_BUFFER_AFTER_MINUTES = 15;
+const VALID_INSTANCE_STATUSES = ["on-time", "delayed", "cancelled"] as const;
 
 type HttpError = Error & { statusCode?: number };
 
@@ -260,8 +261,46 @@ router.post("/flight-schedules", async (req, res) => {
 });
 
 // List flight instances with schedule context
-router.get("/flight-instances", async (_req, res) => {
+router.get("/flight-instances", async (req, res) => {
   try {
+    const statusFilters: string[] = [];
+    const rawStatus = req.query.status;
+    const rawStatusValues = Array.isArray(rawStatus)
+      ? rawStatus
+      : rawStatus
+        ? [rawStatus]
+        : [];
+
+    for (const value of rawStatusValues) {
+      const normalized = String(value)
+        .split(",")
+        .map((part) => part.trim().toLowerCase())
+        .filter(Boolean);
+      statusFilters.push(...normalized);
+    }
+
+    if (
+      statusFilters.length > 0 &&
+      statusFilters.some((status) => !VALID_INSTANCE_STATUSES.includes(status as any))
+    ) {
+      return res.status(400).json({
+        error: "status must be one or more of: on-time, delayed, cancelled",
+      });
+    }
+
+    const whereClauses: string[] = [];
+    const params: Array<string> = [];
+
+    if (statusFilters.length) {
+      const placeholders = statusFilters.map(() => "?").join(", ");
+      whereClauses.push(`fi.status IN (${placeholders})`);
+      params.push(...statusFilters);
+    }
+
+    const whereClause = whereClauses.length
+      ? `WHERE ${whereClauses.join(" AND ")}`
+      : "";
+
     const [rows] = await pool.query(
       `SELECT fi.instance_id,
               fi.flight_id,
@@ -289,7 +328,9 @@ router.get("/flight-instances", async (_req, res) => {
        JOIN airport ad         ON fs.destination_airport_id = ad.airport_id
        LEFT JOIN gate_assignment ga ON ga.instance_id = fi.instance_id
        LEFT JOIN gate g             ON ga.gate_id = g.gate_id
-       ORDER BY fi.departure_datetime DESC`
+       ${whereClause}
+       ORDER BY fi.departure_datetime DESC`,
+      params
     );
     res.json(rows);
   } catch (err: any) {

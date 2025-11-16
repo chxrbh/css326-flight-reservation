@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -8,6 +8,8 @@ import type { FlightInstance } from "@/hooks/useApiQuery";
 import { useFlightInstances } from "@/hooks/useApiQuery";
 import FlightInfoCard from "@/components/FlightInfoCard";
 import { useAuth } from "@/context/AuthContext";
+
+type StatusFilterValue = "all" | FlightInstance["status"];
 
 function formatDT(dt?: string) {
   if (!dt) return "-";
@@ -23,14 +25,27 @@ function formatPrice(value?: number | string | null) {
 }
 
 export default function Flight() {
-  const { data: instances = [], isLoading, isError } = useFlightInstances();
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
+  const instanceFilters = useMemo(
+    () =>
+      statusFilter === "all"
+        ? undefined
+        : {
+            status: [statusFilter],
+          },
+    [statusFilter]
+  );
+  const { data: instances = [], isLoading, isError } =
+    useFlightInstances(instanceFilters);
   const { account, accessType } = useAuth();
   const isAirlineAdmin = accessType === "airline-admin";
-  const filteredInstances = isAirlineAdmin
-    ? instances.filter(
-        (instance) => instance.airline_id === account?.airline_id
-      )
-    : instances;
+  const adminAirlineId = account?.airline_id;
+  const filteredInstances = useMemo(() => {
+    if (!isAirlineAdmin) return instances;
+    return instances.filter(
+      (instance) => instance.airline_id === adminAirlineId
+    );
+  }, [isAirlineAdmin, instances, adminAirlineId]);
   const instanceDialogRef = useRef<{
     openWith: (instance: FlightInstance) => void;
   } | null>(null);
@@ -54,7 +69,25 @@ export default function Flight() {
         <CardHeader>
           <CardTitle>Filter Flights</CardTitle>
         </CardHeader>
-        <CardContent>{/* Room for filters later */}</CardContent>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <label className="flex flex-col text-sm font-medium text-muted-foreground">
+              Status
+              <select
+                className="mt-1 border border-input bg-background rounded-md px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as StatusFilterValue)
+                }
+              >
+                <option value="all">All statuses</option>
+                <option value="on-time">On time</option>
+                <option value="delayed">Delayed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+        </CardContent>
       </Card>
 
       {isLoading ? (
