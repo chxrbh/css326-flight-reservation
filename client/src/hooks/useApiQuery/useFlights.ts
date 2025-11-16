@@ -99,10 +99,8 @@ export function useUpdateFlightInstance() {
   return useMutation({
     mutationFn: (payload: {
       instance_id: number;
-      flight_id: number;
-      status?: "on-time" | "delayed" | "cancelled";
-      departure_datetime: string;
-      arrival_datetime: string;
+      status: "on-time" | "delayed" | "cancelled";
+      delayed_min?: number;
     }) =>
       api(`/flight-instances/${payload.instance_id}`, {
         method: "PUT",
@@ -112,9 +110,22 @@ export function useUpdateFlightInstance() {
       await qc.cancelQueries({ queryKey: ["flight-instances"] });
       const prev = qc.getQueryData<FlightInstance[]>(["flight-instances"]);
       qc.setQueryData<FlightInstance[]>(["flight-instances"], (old) =>
-        (old ?? []).map((it) =>
-          it.instance_id === vars.instance_id ? { ...it, ...vars } : it
-        )
+        (old ?? []).map((it) => {
+          if (it.instance_id !== vars.instance_id) return it;
+          const scheduled =
+            adjustMinutes(it.arrival_datetime, -(it.delayed_min ?? 0)) ??
+            it.arrival_datetime;
+          const targetDelay =
+            vars.status === "delayed" ? vars.delayed_min ?? 0 : 0;
+          const newArrival =
+            adjustMinutes(scheduled, targetDelay) ?? it.arrival_datetime;
+          return {
+            ...it,
+            status: vars.status,
+            delayed_min: targetDelay,
+            arrival_datetime: newArrival,
+          };
+        })
       );
       return { prev };
     },
@@ -123,6 +134,17 @@ export function useUpdateFlightInstance() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["flight-instances"] }),
   });
+}
+
+function adjustMinutes(input: string, minutes: number) {
+  if (!input || typeof minutes !== "number" || Number.isNaN(minutes)) {
+    return null;
+  }
+  const normalized = input.includes("T") ? input : input.replace(" ", "T");
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
 }
 
 export function useCreateFlightSchedule() {

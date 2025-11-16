@@ -325,7 +325,7 @@ router.post("/flight-instances", async (req, res) => {
   }
 });
 
-// Update flight instance
+// Update flight instance (status & delay only)
 router.put("/flight-instances/:id", async (req, res) => {
   const id = Number(req.params.id);
 
@@ -334,34 +334,67 @@ router.put("/flight-instances/:id", async (req, res) => {
   }
 
   try {
-    const {
-      flight_id,
-      departure_datetime,
-      arrival_datetime,
-      status = "on-time",
-      max_sellable_seat = null,
-      delayed_min = 0,
-    } = req.body || {};
+    const { status, delayed_min } = req.body || {};
+    const allowedStatuses = new Set(["on-time", "delayed", "cancelled"]);
 
-    if (!flight_id || !departure_datetime || !arrival_datetime) {
+    if (!status || !allowedStatuses.has(status)) {
       return res.status(400).json({
-        error: "flight_id, departure_datetime, arrival_datetime are required",
+        error: "status is required and must be on-time, delayed, or cancelled",
       });
     }
 
-    // Only call procedure if status is being updated
-if (status) {
-  await pool.query(`CALL UpdateFlightStatus(?, ?)`, [id, status]);
-}
+    const [currentRows] = await pool.query<RowDataPacket[]>(
+      `SELECT arrival_datetime, COALESCE(delayed_min, 0) AS delayed_min
+       FROM flight_instance
+       WHERE instance_id = ?
+       LIMIT 1`,
+      [id]
+    );
 
-// Update other fields manually
-await pool.query(
-  `UPDATE flight_instance
-   SET flight_id = ?, departure_datetime = ?, arrival_datetime = ?, max_sellable_seat = ?, delayed_min = ?
-   WHERE instance_id = ?`,
-  [Number(flight_id), departure_datetime, arrival_datetime, max_sellable_seat, delayed_min ?? 0, id]
-);
+    if (currentRows.length === 0) {
+      return res.status(404).json({ message: "Flight instance not found" });
+    }
 
+    const current = currentRows[0];
+    const arrivalValue = normalizeToDate(current.arrival_datetime);
+    const currentDelay = Number(current.delayed_min ?? 0);
+
+    if (!arrivalValue || Number.isNaN(arrivalValue.getTime())) {
+      return res
+        .status(500)
+        .json({ error: "Invalid stored arrival date for this instance" });
+    }
+
+    const scheduledArrival = new Date(arrivalValue);
+    if (!Number.isNaN(currentDelay)) {
+      scheduledArrival.setMinutes(scheduledArrival.getMinutes() - currentDelay);
+    }
+
+    let newDelay = 0;
+    const nextArrival = new Date(scheduledArrival);
+
+    if (status === "delayed") {
+      if (delayed_min === undefined || delayed_min === null) {
+        return res
+          .status(400)
+          .json({ error: "delayed_min is required when status is delayed" });
+      }
+      const parsedDelay = Number(delayed_min);
+      if (Number.isNaN(parsedDelay) || parsedDelay < 0) {
+        return res
+          .status(400)
+          .json({ error: "delayed_min must be a non-negative number" });
+      }
+      newDelay = parsedDelay;
+      nextArrival.setMinutes(nextArrival.getMinutes() + parsedDelay);
+    }
+
+    await pool.query(
+      `UPDATE flight_instance
+       SET status = ?, delayed_min = ?, arrival_datetime = ?
+       WHERE instance_id = ?`,
+      [status, newDelay, formatDateToMySQL(nextArrival), id]
+    );
 
     const [rows] = await pool.query(
       `SELECT fi.instance_id,
@@ -386,15 +419,35 @@ await pool.query(
       [id]
     );
 
-    if ((rows as any[]).length === 0) {
-      return res.status(404).json({ message: "Flight instance not found" });
-    }
-
     res.json((rows as any[])[0]);
   } catch (err: any) {
     console.error("PUT /flight-instances/:id error:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+function normalizeToDate(value: any): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+  const str = String(value);
+  if (!str) return null;
+  // MySQL DATETIME comes back as "YYYY-MM-DDTHH:MM:SS.000Z" or "YYYY-MM-DD HH:MM:SS"
+  const normalized = str.includes("T") ? str : str.replace(" ", "T");
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateToMySQL(date: Date): string {
+  const pad = (num: number) => String(num).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const HH = pad(date.getHours());
+  const MM = pad(date.getMinutes());
+  const SS = pad(date.getSeconds());
+  return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
+}
 
 export default router;
