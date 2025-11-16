@@ -53,7 +53,9 @@ export default function Reservation() {
 
   const updateStatus = useUpdateReservationStatus();
   const [updatingTicketId, setUpdatingTicketId] = useState<number | null>(null);
-  const [updatingAction, setUpdatingAction] = useState<"check-in" | "cancel" | null>(null);
+  const [updatingAction, setUpdatingAction] = useState<
+    "check-in" | "cancel" | "undo-check-in" | null
+  >(null);
   const [seatDrafts, setSeatDrafts] = useState<Record<number, string>>({});
 
   const errorMessage =
@@ -110,6 +112,36 @@ export default function Reservation() {
         onError: (mutationError: any) => {
           toast({
             title: "Cancellation failed",
+            description: mutationError?.message || "Server error",
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          setUpdatingTicketId(null);
+          setUpdatingAction(null);
+        },
+      }
+    );
+  };
+
+  const handleUndoCheckIn = (ticketId: number) => {
+    setUpdatingTicketId(ticketId);
+    setUpdatingAction("undo-check-in");
+    updateStatus.mutate(
+      {
+        ticket_id: ticketId,
+        status: "booked",
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Check-in reverted",
+            description: "Passenger status moved back to booked.",
+          });
+        },
+        onError: (mutationError: any) => {
+          toast({
+            title: "Unable to revert",
             description: mutationError?.message || "Server error",
             variant: "destructive",
           });
@@ -189,9 +221,10 @@ export default function Reservation() {
                   "";
                 const canCheckIn =
                   isAirlineAdmin && reservation.status === "booked";
-                const canCancel =
-                  reservation.status !== "cancelled" &&
-                  (isAirlineAdmin || isPassenger);
+                const canUndoCheckIn =
+                  isAirlineAdmin && reservation.status === "checked-In";
+                const canCancelTicket =
+                  isPassenger && reservation.status !== "cancelled";
                 const isTicketUpdating =
                   updateStatus.isPending &&
                   updatingTicketId === reservation.ticket_id;
@@ -199,6 +232,8 @@ export default function Reservation() {
                   isTicketUpdating && updatingAction === "check-in";
                 const isCancelUpdating =
                   isTicketUpdating && updatingAction === "cancel";
+                const isUndoUpdating =
+                  isTicketUpdating && updatingAction === "undo-check-in";
 
                 return (
                   <FlightInfoCard
@@ -276,7 +311,21 @@ export default function Reservation() {
                                 </Button>
                               </div>
                             )}
-                            {canCancel && (
+                            {canUndoCheckIn && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleUndoCheckIn(reservation.ticket_id)
+                                }
+                                disabled={isTicketUpdating}
+                              >
+                                {isUndoUpdating
+                                  ? "Reverting..."
+                                  : "Cancel Check-in"}
+                              </Button>
+                            )}
+                            {canCancelTicket && (
                               <Button
                                 size="sm"
                                 variant="destructive"

@@ -184,24 +184,37 @@ router.patch("/:ticketId/status", async (req, res) => {
   }
 
   try {
-    const fields: string[] = ["status = ?"];
-    const params: any[] = [status];
+    const updateFields: string[] = ["status = ?"];
+    const updateParams: any[] = [status];
     if (typeof seat !== "undefined") {
-      fields.push("seat = ?");
-      params.push(seat || null);
+      updateFields.push("seat = ?");
+      updateParams.push(seat || null);
     }
-    params.push(ticketId);
 
     let result: OkPacket;
     if (status === "cancelled") {
       // Use stored procedure to cancel
       [result] = await pool.query<OkPacket>(`CALL CancelTicket(?)`, [ticketId]);
-    } else {
-      // Keep other status updates
+    } else if (status === "checked-In") {
+      // Call stored procedure to check-in + set seat
+      [result] = await pool.query<OkPacket>(`CALL CheckInTicket(?, ?)`, [
+        ticketId,
+        seat || null,
+      ]);
+      // } else {
+      //   // Keep other status updates
+      //   [result] = await pool.query<OkPacket>(
+      //     `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
+      //     [status, seat || null, ticketId]
+      //   );
+    } else if (status === "booked") {
+      const setClause = updateFields.join(", ");
       [result] = await pool.query<OkPacket>(
-        `UPDATE ticket SET status = ?, seat = ? WHERE ticket_id = ?`,
-        [status, seat || null, ticketId]
+        `UPDATE ticket SET ${setClause} WHERE ticket_id = ?`,
+        [...updateParams, ticketId]
       );
+    } else {
+      return res.status(400).json({ error: "Invalid ticket status" });
     }
 
     if (result.affectedRows === 0) {

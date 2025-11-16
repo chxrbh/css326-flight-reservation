@@ -511,6 +511,20 @@ BEGIN
 END$$
 DELIMITER ;
 
+-- check-in a ticket
+DELIMITER $$
+CREATE PROCEDURE CheckInTicket(
+    IN p_ticket_id INT,
+    IN p_seat VARCHAR(10)
+)
+BEGIN
+    UPDATE ticket
+    SET 
+        status = 'checked-In',
+        seat = p_seat
+    WHERE ticket_id = p_ticket_id;
+END$$
+
 -- 3️⃣ Update flight instance status
 DELIMITER $$
 CREATE PROCEDURE UpdateFlightStatus(IN p_instance_id INT, IN p_status ENUM('on time','delayed','cancelled'))
