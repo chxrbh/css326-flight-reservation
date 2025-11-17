@@ -1,5 +1,5 @@
 {
-  "name": "vite-react-mysql",
+  "name": "flight-reservation-system",
   "private": true,
   "scripts": {
     "dev": "concurrently -n CLIENT,SERVER -c blue,green \"npm:dev:client\" \"npm:dev:server\"",
