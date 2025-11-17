@@ -895,7 +895,3 @@ GRANT USAGE ON `css326_project_airport_new`.* TO 'employee'@'localhost';
 GRANT SELECT ON `css326_project_airport_new`.`view_flight_info` TO 'employee'@'localhost';
 GRANT SELECT ON `css326_project_airport_new`.`view_ticket_info` TO 'employee'@'localhost';
 FLUSH PRIVILEGES;
-
--- Remove all privileges from root user
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'root'@'localhost';
-FLUSH PRIVILEGES;
