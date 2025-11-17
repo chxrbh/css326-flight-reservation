@@ -38,7 +38,7 @@ export default function AuthStatus() {
             Sign in or create a passenger account.
           </span>
           <Button asChild size="sm" className="w-full sm:w-auto">
-            <Link to="/auth">Open auth page</Link>
+            <Link to="/auth">Sign In / Sign Up</Link>
           </Button>
         </div>
       )}

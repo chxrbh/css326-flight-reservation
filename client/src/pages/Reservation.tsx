@@ -229,7 +229,7 @@ export default function Reservation() {
                 : "Book a flight from the search page."}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {reservations.map((reservation) => {
                 const seatValue =
                   seatDrafts[reservation.ticket_id] ??
@@ -304,80 +304,73 @@ export default function Reservation() {
                           Ticket {reservation.ticket_no} • Passenger{" "}
                           {reservation.first_name} {reservation.last_name}
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                          <span className="text-muted-foreground">
-                            Instance #{reservation.instance_id}
-                          </span>
-                          <div className="flex flex-wrap items-center gap-3">
-                            {canCheckIn && (
-                              <div className="flex items-center gap-2">
-                                <div className="flex flex-col text-xs">
-                                  <Label
-                                    htmlFor={`seat-${reservation.ticket_id}`}
-                                  >
-                                    Seat
-                                  </Label>
-                                  <Input
-                                    id={`seat-${reservation.ticket_id}`}
-                                    className="h-8 w-24 text-sm"
-                                    placeholder="e.g. 12A"
-                                    value={seatValue}
-                                    onChange={(event) =>
-                                      setSeatDrafts((prev) => ({
-                                        ...prev,
-                                        [reservation.ticket_id]:
-                                          event.target.value,
-                                      }))
-                                    }
-                                  />
-                                </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() =>
-                                    handleCheckIn(
-                                      reservation.ticket_id,
-                                      seatValue
-                                    )
+                        <div className="flex flex-wrap items-center gap-3">
+                          {canCheckIn && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col text-xs">
+                                <Label htmlFor={`seat-${reservation.ticket_id}`}>
+                                  Seat
+                                </Label>
+                                <Input
+                                  id={`seat-${reservation.ticket_id}`}
+                                  className="h-8 w-24 text-sm"
+                                  placeholder="e.g. 12A"
+                                  value={seatValue}
+                                  onChange={(event) =>
+                                    setSeatDrafts((prev) => ({
+                                      ...prev,
+                                      [reservation.ticket_id]:
+                                        event.target.value,
+                                    }))
                                   }
-                                  disabled={isTicketUpdating}
-                                >
-                                  {isCheckInUpdating
-                                    ? "Updating..."
-                                    : "Check-in"}
-                                </Button>
+                                />
                               </div>
-                            )}
-                            {canUndoCheckIn && (
                               <Button
                                 size="sm"
-                                variant="outline"
                                 onClick={() =>
-                                  handleUndoCheckIn(reservation.ticket_id)
-                                }
-                                disabled={isTicketUpdating}
-                              >
-                                {isUndoUpdating
-                                  ? "Reverting..."
-                                  : "Cancel Check-in"}
-                              </Button>
-                            )}
-                            {canCancelTicket && (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() =>
-                                  handleCancelReservation(
-                                    reservation.ticket_id
+                                  handleCheckIn(
+                                    reservation.ticket_id,
+                                    seatValue
                                   )
                                 }
                                 disabled={isTicketUpdating}
                               >
-                                {isCancelUpdating
-                                  ? "Cancelling..."
-                                  : "Cancel Ticket"}
+                                {isCheckInUpdating
+                                  ? "Updating..."
+                                  : "Check-in"}
                               </Button>
-                            )}
-                          </div>
+                            </div>
+                          )}
+                          {canUndoCheckIn && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleUndoCheckIn(reservation.ticket_id)
+                              }
+                              disabled={isTicketUpdating}
+                            >
+                              {isUndoUpdating
+                                ? "Reverting..."
+                                : "Cancel Check-in"}
+                            </Button>
+                          )}
+                          {canCancelTicket && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() =>
+                                handleCancelReservation(
+                                  reservation.ticket_id
+                                )
+                              }
+                              disabled={isTicketUpdating}
+                            >
+                              {isCancelUpdating
+                                ? "Cancelling..."
+                                : "Cancel Ticket"}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type Mode = "signin" | "signup";
 
@@ -107,9 +108,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-[70vh] flex items-center justify-center px-4">
+    <div className="min-h-[70vh] flex items-start justify-center px-4 py-16">
       <Card className="w-full max-w-xl">
-        <CardHeader className="space-y-2">
+        <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl">
             {mode === "signin"
               ? "Sign in to Flight Reservation"
@@ -120,27 +121,28 @@ export default function AuthPage() {
               ? "Enter your credentials to access your dashboard."
               : "Passengers can create their own accounts. Airline or super admins must be added by existing staff."}
           </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={mode === "signin" ? "default" : "outline"}
-              onClick={() => {
-                setMode("signin");
-                resetError();
-              }}
-            >
-              Sign In
-            </Button>
-            <Button
-              type="button"
-              variant={mode === "signup" ? "default" : "outline"}
-              onClick={() => {
-                setMode("signup");
-                resetError();
-              }}
-            >
-              Sign Up
-            </Button>
+          <div className="inline-flex items-center justify-center rounded-full border bg-muted p-1 text-sm font-medium mx-auto">
+            {[
+              { key: "signin", label: "Sign In" },
+              { key: "signup", label: "Sign Up" },
+            ].map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={cn(
+                  "px-4 py-1 rounded-full transition-colors",
+                  mode === option.key
+                    ? "bg-background text-foreground shadow"
+                    : "text-muted-foreground"
+                )}
+                onClick={() => {
+                  setMode(option.key as Mode);
+                  resetError();
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </CardHeader>
         <CardContent>

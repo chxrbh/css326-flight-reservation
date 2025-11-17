@@ -244,71 +244,74 @@ export default function FlightsSearch() {
               No flights available for the selected criteria.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {flights.map((flight) => (
-                <FlightInfoCard
-                  key={flight.instance_id}
-                  flightNo={flight.flight_no}
-                  airlineName={flight.airline_name}
-                  airlineCode={flight.airline_code}
-                  originCode={flight.origin_code}
-                  originName={flight.origin_name}
-                  destinationCode={flight.destination_code}
-                  destinationName={flight.destination_name}
-                  details={[
-                    {
-                      label: "Departure",
-                      value: formatLocalDateTime(flight.departure_datetime),
-                    },
-                    {
-                      label: "Arrival",
-                      value: formatLocalDateTime(flight.arrival_datetime),
-                    },
-                    { label: "Price", value: formatPrice(flight.price_usd) },
-                    {
-                      label: "Status",
-                      value: (
-                        <span className="text-primary capitalize">
-                          {flight.status.replace("-", " ")}
-                        </span>
-                      ),
-                    },
-                  ]}
-                  footer={
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">
-                        Instance #{flight.instance_id}
-                      </div>
-                      <Button
-                        disabled={
-                          bookReservation.isPending ||
-                          !passengerId ||
-                          flight.status === "cancelled"
-                        }
-                        onClick={() =>
-                          handleBook(flight.instance_id, flight.flight_no)
-                        }
-                        title={
-                          !passengerId
-                            ? "Only passenger accounts can book flights"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {flights.map((flight) => {
+                const isAlertStatus =
+                  flight.status === "delayed" || flight.status === "cancelled";
+                const statusClass = isAlertStatus
+                  ? "text-red-600"
+                  : "text-primary";
+                return (
+                  <FlightInfoCard
+                    key={flight.instance_id}
+                    flightNo={flight.flight_no}
+                    airlineName={flight.airline_name}
+                    airlineCode={flight.airline_code}
+                    originCode={flight.origin_code}
+                    originName={flight.origin_name}
+                    destinationCode={flight.destination_code}
+                    destinationName={flight.destination_name}
+                    details={[
+                      {
+                        label: "Departure",
+                        value: formatLocalDateTime(flight.departure_datetime),
+                      },
+                      {
+                        label: "Arrival",
+                        value: formatLocalDateTime(flight.arrival_datetime),
+                      },
+                      {
+                        label: "Status",
+                        value: (
+                          <span className={`${statusClass} capitalize`}>
+                            {flight.status.replace("-", " ")}
+                          </span>
+                        ),
+                      },
+                    ]}
+                    footer={
+                      <div className="flex justify-end">
+                        <Button
+                          disabled={
+                            bookReservation.isPending ||
+                            !passengerId ||
+                            flight.status === "cancelled"
+                          }
+                          onClick={() =>
+                            handleBook(flight.instance_id, flight.flight_no)
+                          }
+                          title={
+                            !passengerId
+                              ? "Only passenger accounts can book flights"
+                              : flight.status === "cancelled"
+                              ? "Cancelled flights cannot be booked"
+                              : "Book this flight"
+                          }
+                        >
+                          {!passengerId
+                            ? "Sign in with passenger account"
                             : flight.status === "cancelled"
-                            ? "Cancelled flights cannot be booked"
-                            : "Book this flight"
-                        }
-                      >
-                        {!passengerId
-                          ? "Sign in with passenger account"
-                          : flight.status === "cancelled"
-                          ? "Unavailable"
-                          : bookReservation.isPending &&
-                            bookingInstanceId === flight.instance_id
-                          ? "Booking..."
-                          : "Book Flight"}
-                      </Button>
-                    </div>
-                  }
-                />
-              ))}
+                            ? "Unavailable"
+                            : bookReservation.isPending &&
+                              bookingInstanceId === flight.instance_id
+                            ? "Booking..."
+                            : formatPrice(flight.price_usd)}
+                        </Button>
+                      </div>
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </CardContent>

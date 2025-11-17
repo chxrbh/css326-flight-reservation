@@ -136,54 +136,59 @@ export default function Flight() {
             : "No flight instances yet. Create one to get started."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredInstances.map((instance) => (
-            <FlightInfoCard
-              key={instance.instance_id}
-              flightNo={instance.flight_no}
-              airlineName={instance.airline_name}
-              airlineCode={instance.airline_code}
-              originCode={instance.origin_code}
-              destinationCode={instance.dest_code}
-              details={[
-                {
-                  label: "Departure",
-                  value: formatLocalDateTime(instance.departure_datetime),
-                },
-                {
-                  label: "Arrival",
-                  value: formatLocalDateTime(instance.arrival_datetime),
-                },
-                {
-                  label: "Status",
-                  value: (
-                    <span className="text-primary capitalize">
-                      {instance.status.replace("-", " ")}
-                    </span>
-                  ),
-                },
-                {
-                  label: "Gate",
-                  value: instance.gate_code ? (
-                    `Gate ${instance.gate_code}`
-                  ) : (
-                    <span className="text-muted-foreground">Unassigned</span>
-                  ),
-                },
-                { label: "Price", value: formatPrice(instance.price_usd) },
-              ]}
-              headerAction={
-                <Button
-                  variant="outline"
-                  size="icon"
-                  title="Edit"
-                  onClick={() => instanceDialogRef.current?.openWith(instance)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              }
-            />
-          ))}
+        <div className="grid grid-cols-2 gap-6">
+          {filteredInstances.map((instance) => {
+            const isAlertStatus =
+              instance.status === "delayed" || instance.status === "cancelled";
+            const statusClass = isAlertStatus ? "text-red-600" : "text-primary";
+            return (
+              <FlightInfoCard
+                key={instance.instance_id}
+                flightNo={instance.flight_no}
+                airlineName={instance.airline_name}
+                airlineCode={instance.airline_code}
+                originCode={instance.origin_code}
+                destinationCode={instance.dest_code}
+                details={[
+                  {
+                    label: "Departure",
+                    value: formatLocalDateTime(instance.departure_datetime),
+                  },
+                  {
+                    label: "Arrival",
+                    value: formatLocalDateTime(instance.arrival_datetime),
+                  },
+                  {
+                    label: "Status",
+                    value: (
+                      <span className={`${statusClass} capitalize`}>
+                        {instance.status.replace("-", " ")}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: "Gate",
+                    value: instance.gate_code ? (
+                      `Gate ${instance.gate_code}`
+                    ) : (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    ),
+                  },
+                  { label: "Price", value: formatPrice(instance.price_usd) },
+                ]}
+                headerAction={
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="Edit"
+                    onClick={() => instanceDialogRef.current?.openWith(instance)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                }
+              />
+            );
+          })}
         </div>
       )}
     </div>
