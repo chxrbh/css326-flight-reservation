@@ -45,6 +45,17 @@ export function adjustLocalByMinutes(local: string, minutes: number) {
   return `${yyyy}-${mm}-${dd}T${HH}:${MM}`;
 }
 
+export function adjustISOStringByMinutes(input: string, minutes: number) {
+  if (!input || typeof minutes !== "number" || Number.isNaN(minutes)) {
+    return null;
+  }
+  const normalized = input.includes("T") ? input : input.replace(" ", "T");
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
+}
+
 export function addDurationLocal(local: string, duration?: string | null) {
   if (!local || !duration) return local;
   const parts = duration.split(":");

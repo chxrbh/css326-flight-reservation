@@ -559,6 +559,77 @@ router.post("/flight-instances", async (req, res) => {
   }
 });
 
+router.get("/flight-schedules/:id/gates", async (req, res) => {
+  const flightId = Number(req.params.id);
+  if (Number.isNaN(flightId) || flightId <= 0) {
+    return res.status(400).json({ error: "Invalid flight ID" });
+  }
+
+  const departureRaw = req.query.departure_datetime;
+  if (typeof departureRaw !== "string" || !departureRaw.trim()) {
+    return res
+      .status(400)
+      .json({ error: "departure_datetime query parameter is required" });
+  }
+
+  const departureDate = normalizeToDate(departureRaw);
+  if (!departureDate) {
+    return res
+      .status(400)
+      .json({ error: "departure_datetime must be a valid date-time value" });
+  }
+
+  try {
+    const [scheduleRows] = await pool.query<RowDataPacket[]>(
+      `SELECT origin_airport_id
+       FROM flight_schedule
+       WHERE flight_id = ?
+       LIMIT 1`,
+      [flightId]
+    );
+
+    if (scheduleRows.length === 0) {
+      return res.status(404).json({ error: "Flight schedule not found" });
+    }
+
+    const originAirportId = Number(scheduleRows[0].origin_airport_id);
+    const departureUtc = formatDateToMySQLUTC(departureDate);
+
+    const [gateRows] = await pool.query<RowDataPacket[]>(
+      `SELECT g.gate_id,
+              g.gate_code,
+              g.status,
+              NOT EXISTS (
+                SELECT 1
+                FROM gate_assignment ga
+                WHERE ga.gate_id = g.gate_id
+                  AND ga.occupy_start_utc < DATE_ADD(?, INTERVAL ${GATE_BUFFER_AFTER_MINUTES} MINUTE)
+                  AND ga.occupy_end_utc > DATE_SUB(?, INTERVAL ${GATE_BUFFER_BEFORE_MINUTES} MINUTE)
+              ) AS is_available
+       FROM gate g
+       WHERE g.airport_id = ?
+         AND g.status = 'active'
+       ORDER BY g.gate_code ASC`,
+      [departureUtc, departureUtc, originAirportId]
+    );
+
+    res.json({
+      flight_id: flightId,
+      origin_airport_id: originAirportId,
+      departure_datetime: departureUtc,
+      gates: gateRows.map((gate) => ({
+        gate_id: Number(gate.gate_id),
+        gate_code: gate.gate_code,
+        status: gate.status,
+        is_available: Boolean(gate.is_available),
+      })),
+    });
+  } catch (err: any) {
+    console.error("GET /flight-schedules/:id/gates error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/flight-instances/:id/gates", async (req, res) => {
   const instanceId = Number(req.params.id);
   if (Number.isNaN(instanceId)) {

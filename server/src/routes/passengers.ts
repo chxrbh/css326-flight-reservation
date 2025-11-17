@@ -1,7 +1,14 @@
 import { Router } from "express";
+import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { pool } from "../db";
 
 const router = Router();
+
+const normalizeNullableText = (value?: string | null) => {
+  if (value === null || value === undefined) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length ? trimmed : null;
+};
 
 router.get("/:id", async (req, res) => {
   const passengerId = Number(req.params.id);
@@ -9,26 +16,31 @@ router.get("/:id", async (req, res) => {
     return res.status(400).json({ error: "passenger_id must be a number" });
   }
 
-  const [rows]: any = await pool.query(
-    `SELECT passenger_id,
-            first_name,
-            last_name,
-            gender,
-            DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
-            phone,
-            nationality,
-            account_id
-     FROM passenger
-     WHERE passenger_id = ?
-     LIMIT 1`,
-    [passengerId]
-  );
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT passenger_id,
+              first_name,
+              last_name,
+              gender,
+              DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
+              phone,
+              nationality,
+              account_id
+       FROM passenger
+       WHERE passenger_id = ?
+       LIMIT 1`,
+      [passengerId]
+    );
 
-  if (!rows.length) {
-    return res.status(404).json({ error: "Passenger not found" });
+    if (!rows.length) {
+      return res.status(404).json({ error: "Passenger not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("GET /passengers/:id error:", error);
+    res.status(500).json({ error: "Failed to load passenger profile" });
   }
-
-  res.json(rows[0]);
 });
 
 router.put("/:id", async (req, res) => {
@@ -37,14 +49,8 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ error: "passenger_id must be a number" });
   }
 
-  const {
-    first_name,
-    last_name,
-    gender = null,
-    dob = null,
-    phone = null,
-    nationality = null,
-  } = req.body;
+  const { first_name, last_name, gender = null, dob, phone, nationality } =
+    req.body ?? {};
 
   if (!first_name || !last_name) {
     return res
@@ -56,33 +62,50 @@ router.put("/:id", async (req, res) => {
     return res.status(400).json({ error: "gender must be 'M' or 'F'" });
   }
 
-  const [result]: any = await pool.query(
-    `UPDATE passenger
-     SET first_name = ?, last_name = ?, gender = ?, dob = ?, phone = ?, nationality = ?
-     WHERE passenger_id = ?`,
-    [first_name, last_name, gender, dob, phone, nationality, passengerId]
-  );
+  const normalizedDob = normalizeNullableText(dob);
+  const normalizedPhone = normalizeNullableText(phone);
+  const normalizedNationality = normalizeNullableText(nationality);
 
-  if (result.affectedRows === 0) {
-    return res.status(404).json({ error: "Passenger not found" });
+  try {
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE passenger
+       SET first_name = ?, last_name = ?, gender = ?, dob = ?, phone = ?, nationality = ?
+       WHERE passenger_id = ?`,
+      [
+        first_name.trim(),
+        last_name.trim(),
+        gender || null,
+        normalizedDob,
+        normalizedPhone,
+        normalizedNationality,
+        passengerId,
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Passenger not found" });
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT passenger_id,
+              first_name,
+              last_name,
+              gender,
+              DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
+              phone,
+              nationality,
+              account_id
+       FROM passenger
+       WHERE passenger_id = ?
+       LIMIT 1`,
+      [passengerId]
+    );
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error("PUT /passengers/:id error:", error);
+    res.status(500).json({ error: "Failed to update passenger profile" });
   }
-
-  const [rows]: any = await pool.query(
-    `SELECT passenger_id,
-            first_name,
-            last_name,
-            gender,
-            DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
-            phone,
-            nationality,
-            account_id
-     FROM passenger
-     WHERE passenger_id = ?
-     LIMIT 1`,
-    [passengerId]
-  );
-
-  res.json(rows[0]);
 });
 
 export default router;

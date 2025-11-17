@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { adjustISOStringByMinutes } from "@/lib/datetime";
 
 export type FlightSchedule = {
   flight_id: number;
@@ -48,6 +49,13 @@ export type GateOptionsResponse = {
   current_gate_id: number | null;
   occupy_start_utc: string | null;
   occupy_end_utc: string | null;
+  gates: GateOption[];
+};
+
+export type ScheduleGateOptionsResponse = {
+  flight_id: number;
+  origin_airport_id: number;
+  departure_datetime: string;
   gates: GateOption[];
 };
 
@@ -163,7 +171,10 @@ export function useUpdateFlightInstance() {
         (old ?? []).map((it) => {
           if (it.instance_id !== vars.instance_id) return it;
           const scheduled =
-            adjustMinutes(it.arrival_datetime, -(it.delayed_min ?? 0)) ??
+            adjustISOStringByMinutes(
+              it.arrival_datetime,
+              -(it.delayed_min ?? 0)
+            ) ??
             it.arrival_datetime;
           const requestedDelay =
             vars.status === "delayed" && typeof vars.delayed_min === "number"
@@ -172,7 +183,8 @@ export function useUpdateFlightInstance() {
           const targetDelay =
             requestedDelay && requestedDelay > 0 ? requestedDelay : 0;
           const newArrival =
-            adjustMinutes(scheduled, targetDelay) ?? it.arrival_datetime;
+            adjustISOStringByMinutes(scheduled, targetDelay) ??
+            it.arrival_datetime;
           return {
             ...it,
             status: vars.status,
@@ -199,6 +211,22 @@ export function useGateOptions(instanceId: number | null) {
   });
 }
 
+export function useScheduleGateOptions(
+  flightId: number | null,
+  departureUtc: string | null
+) {
+  return useQuery<ScheduleGateOptionsResponse>({
+    queryKey: ["schedule-gate-options", flightId, departureUtc],
+    enabled: Boolean(flightId && departureUtc),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("departure_datetime", departureUtc as string);
+      return api(`/flight-schedules/${flightId}/gates?${params.toString()}`);
+    },
+    staleTime: 1000 * 15,
+  });
+}
+
 export function useUpdateGateAssignment() {
   const qc = useQueryClient();
   return useMutation({
@@ -207,22 +235,15 @@ export function useUpdateGateAssignment() {
         method: "PUT",
         body: JSON.stringify({ gate_id: payload.gate_id }),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["flight-instances"] });
-      qc.invalidateQueries({ queryKey: ["gate-options"] });
+      if (vars?.instance_id) {
+        qc.invalidateQueries({
+          queryKey: ["gate-options", vars.instance_id],
+        });
+      }
     },
   });
-}
-
-function adjustMinutes(input: string, minutes: number) {
-  if (!input || typeof minutes !== "number" || Number.isNaN(minutes)) {
-    return null;
-  }
-  const normalized = input.includes("T") ? input : input.replace(" ", "T");
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setMinutes(date.getMinutes() + minutes);
-  return date.toISOString();
 }
 
 export function useCreateFlightSchedule() {
