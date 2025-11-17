@@ -10,14 +10,14 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    path: "/search",
-    label: "Search",
-    allowed: ["passenger"],
-  },
-  {
     path: "/profile",
     label: "Profile",
     allowed: ["passenger", "airline-admin"],
+  },
+  {
+    path: "/search",
+    label: "Search",
+    allowed: ["passenger"],
   },
   {
     path: "/reservation",
