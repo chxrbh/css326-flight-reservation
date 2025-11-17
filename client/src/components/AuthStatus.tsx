@@ -18,8 +18,10 @@ export default function AuthStatus() {
       {account ? (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex flex-col">
-            <span className="font-medium leading-tight">{displayName}</span>
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+            <span className="font-medium leading-tight text-white">
+              {displayName}
+            </span>
+            <span className="text-xs text-white uppercase tracking-wide">
               {account.email} • {accessType?.replace("-", " ")}
             </span>
           </div>
@@ -34,11 +36,11 @@ export default function AuthStatus() {
         </div>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-white">
             Sign in or create a passenger account.
           </span>
           <Button asChild size="sm" className="w-full sm:w-auto">
-            <Link to="/auth">Open auth page</Link>
+            <Link to="/auth">Sign In / Sign Up</Link>
           </Button>
         </div>
       )}
