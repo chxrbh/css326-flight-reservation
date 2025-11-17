@@ -130,7 +130,14 @@ router.post("/", async (req, res) => {
     }
 
     const flightNo = String(flightRows[0].flight_no);
-    const instancePrice = flightRows[0].price_usd ?? null;
+    const instancePriceRaw =
+      flightRows[0].price_usd === null || flightRows[0].price_usd === undefined
+        ? null
+        : Number(flightRows[0].price_usd);
+    const instancePrice =
+      instancePriceRaw === null || Number.isNaN(instancePriceRaw)
+        ? null
+        : instancePriceRaw;
     const departureDateTime = flightRows[0].departure_datetime;
     const arrivalDateTime = flightRows[0].arrival_datetime;
     if (!departureDateTime || !arrivalDateTime) {
@@ -183,16 +190,22 @@ router.post("/", async (req, res) => {
         },
       });
     }
+    const providedPrice =
+      price_usd === null || price_usd === undefined ? null : Number(price_usd);
+    if (providedPrice !== null && Number.isNaN(providedPrice)) {
+      return res.status(400).json({ error: "price_usd must be a number" });
+    }
+    const ticketPrice =
+      providedPrice ?? instancePrice ?? null;
+
     const ticketNo = `${flightNo}-${Date.now().toString().slice(-6)}`;
-    const bookingDate = new Date().toISOString().slice(0, 10);
-    const ticketPrice = price_usd ?? instancePrice;
 
     const [result]: any = await pool.query(`CALL BookTicket(?, ?, ?, ?, ?)`, [
       ticketNo,
       passengerId,
       instanceId,
       seat ?? null,
-      price_usd ?? null,
+      ticketPrice,
     ]);
     const ticketId = result[0][0].ticket_id;
 

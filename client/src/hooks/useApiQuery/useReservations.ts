@@ -62,7 +62,11 @@ export function useReservations(filters?: ReservationFilters) {
 export function useBookReservation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { instance_id: number; passenger_id: number }) =>
+    mutationFn: (payload: {
+      instance_id: number;
+      passenger_id: number;
+      price_usd?: number | null;
+    }) =>
       api("/reservations", {
         method: "POST",
         body: JSON.stringify(payload),

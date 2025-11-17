@@ -81,7 +81,11 @@ export default function FlightsSearch() {
     setSearchParams({});
   };
 
-  const handleBook = (instanceId: number, flightNo: string) => {
+  const handleBook = (
+    instanceId: number,
+    flightNo: string,
+    priceUsd: number | null
+  ) => {
     if (!account) {
       toast({
         title: "Sign in required",
@@ -100,7 +104,11 @@ export default function FlightsSearch() {
     }
     setBookingInstanceId(instanceId);
     bookReservation.mutate(
-      { instance_id: instanceId, passenger_id: passengerId },
+      {
+        instance_id: instanceId,
+        passenger_id: passengerId,
+        price_usd: priceUsd ?? null,
+      },
       {
         onSuccess: () => {
           toast({
@@ -288,7 +296,11 @@ export default function FlightsSearch() {
                             flight.status === "cancelled"
                           }
                           onClick={() =>
-                            handleBook(flight.instance_id, flight.flight_no)
+                            handleBook(
+                              flight.instance_id,
+                              flight.flight_no,
+                              flight.price_usd
+                            )
                           }
                           title={
                             !passengerId
