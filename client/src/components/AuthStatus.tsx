@@ -21,7 +21,7 @@ export default function AuthStatus() {
             <span className="font-medium leading-tight text-white">
               {displayName}
             </span>
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">
+            <span className="text-xs text-white uppercase tracking-wide">
               {account.email} • {accessType?.replace("-", " ")}
             </span>
           </div>
