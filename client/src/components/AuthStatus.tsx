@@ -34,7 +34,7 @@ export default function AuthStatus() {
         </div>
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-white">
             Sign in or create a passenger account.
           </span>
           <Button asChild size="sm" className="w-full sm:w-auto">
