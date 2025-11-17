@@ -28,7 +28,9 @@ export type FlightInstance = {
   airline_code: string;
   origin_airport_id: number;
   origin_code: string;
+  origin_name: string | null;
   dest_code: string;
+  destination_name: string | null;
   gate_id: number | null;
   gate_code: string | null;
   gate_assignment_start: string | null;
@@ -125,7 +127,9 @@ export function useCreateFlightInstance() {
         airline_code: "",
         origin_airport_id: 0,
         origin_code: "",
+        origin_name: null,
         dest_code: "",
+        destination_name: null,
         gate_id: null,
         gate_code: null,
         gate_assignment_start: null,

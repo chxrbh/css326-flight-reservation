@@ -148,7 +148,9 @@ export default function Flight() {
                 airlineName={instance.airline_name}
                 airlineCode={instance.airline_code}
                 originCode={instance.origin_code}
+                originName={instance.origin_name}
                 destinationCode={instance.dest_code}
+                destinationName={instance.destination_name}
                 details={[
                   {
                     label: "Departure",
