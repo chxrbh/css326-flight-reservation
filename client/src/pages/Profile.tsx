@@ -25,7 +25,6 @@ type PassengerFormState = {
 type AdminFormState = {
   firstName: string;
   lastName: string;
-  hireDate: string;
 };
 
 const GENDER_OPTIONS = [
@@ -181,7 +180,7 @@ function PassengerProfileSection() {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
@@ -199,7 +198,7 @@ function PassengerProfileSection() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Profile status</CardTitle>
           </CardHeader>
@@ -210,7 +209,7 @@ function PassengerProfileSection() {
                 {passengerId ?? "Not linked to a passenger record"}
               </p>
             </div>
-            {/* <div>
+            <div>
               <p className="text-muted-foreground">Last update</p>
               <p className="font-medium">
                 {profileRecord
@@ -221,9 +220,9 @@ function PassengerProfileSection() {
                     : "Basic profile"
                   : "No profile data"}
               </p>
-            </div> */}
+            </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <Card>
@@ -345,7 +344,6 @@ function AirlineAdminProfileSection() {
   const [form, setForm] = useState<AdminFormState>({
     firstName: "",
     lastName: "",
-    hireDate: "",
   });
 
   useEffect(() => {
@@ -353,7 +351,6 @@ function AirlineAdminProfileSection() {
       setForm({
         firstName: data.first_name ?? "",
         lastName: data.last_name ?? "",
-        hireDate: normalizeDateInputValue(data.hire_date ?? null),
       });
     }
   }, [data]);
@@ -388,7 +385,7 @@ function AirlineAdminProfileSection() {
       {
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
-        hire_date: form.hireDate || null,
+        hire_date: data?.hire_date ?? null,
       },
       {
         onSuccess: (updated) => {
@@ -507,19 +504,12 @@ function AirlineAdminProfileSection() {
                   <p className="font-medium">{data?.employee_id ?? "-"}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="hire-date">Hire date</Label>
-                  <Input
-                    id="hire-date"
-                    type="date"
-                    value={form.hireDate}
-                    onChange={handleChange("hireDate")}
-                    disabled={disabled}
-                  />
-                  {/* {data?.hire_date && (
-                    <p className="text-xs text-muted-foreground">
-                      Current: {formatLocalDate(data.hire_date)}
-                    </p>
-                  )} */}
+                  <p className="text-muted-foreground text-sm">Hire date</p>
+                  <p className="font-medium">
+                    {data?.hire_date
+                      ? formatLocalDate(data.hire_date)
+                      : "Not available"}
+                  </p>
                 </div>
               </div>
 
