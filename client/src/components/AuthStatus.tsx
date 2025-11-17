@@ -18,7 +18,9 @@ export default function AuthStatus() {
       {account ? (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex flex-col">
-            <span className="font-medium leading-tight">{displayName}</span>
+            <span className="font-medium leading-tight text-white">
+              {displayName}
+            </span>
             <span className="text-xs text-muted-foreground uppercase tracking-wide">
               {account.email} • {accessType?.replace("-", " ")}
             </span>
